@@ -1,0 +1,23 @@
+{
+  "app.title": "تطبيق أساسي",
+  "home.title": "الرئيسية",
+  "home.hello": "مرحبًا",
+  "settings.title": "الإعدادات",
+  "settings.language": "اللغة",
+  "settings.theme": "المظهر",
+  "theme.system": "النظام",
+  "theme.light": "فاتح",
+  "theme.dark": "داكن",
+  "language.en": "الإنجليزية",
+  "language.ar": "العربية",
+  "auth.login": "تسجيل الدخول",
+  "auth.logout": "تسجيل الخروج",
+  "auth.welcome": "مرحبًا بعودتك",
+  "auth.email": "البريد الإلكتروني",
+  "auth.password": "كلمة المرور",
+  "auth.email_required": "البريد الإلكتروني مطلوب",
+  "auth.email_invalid": "يرجى إدخال بريد إلكتروني صحيح",
+  "auth.password_required": "كلمة المرور مطلوبة",
+  "auth.password_min_length": "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+  "auth.demo_credentials": "بيانات العرض التوضيحي:"
+}

@@ -1,0 +1,23 @@
+{
+  "app.title": "Base App",
+  "home.title": "Home",
+  "home.hello": "Hello",
+  "settings.title": "Settings",
+  "settings.language": "Language",
+  "settings.theme": "Theme",
+  "theme.system": "System",
+  "theme.light": "Light",
+  "theme.dark": "Dark",
+  "language.en": "English",
+  "language.ar": "Arabic",
+  "auth.login": "Login",
+  "auth.logout": "Logout",
+  "auth.welcome": "Welcome Back",
+  "auth.email": "Email",
+  "auth.password": "Password",
+  "auth.email_required": "Email is required",
+  "auth.email_invalid": "Please enter a valid email",
+  "auth.password_required": "Password is required",
+  "auth.password_min_length": "Password must be at least 6 characters",
+  "auth.demo_credentials": "Demo Credentials:"
+}
