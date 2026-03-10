@@ -48,16 +48,20 @@ class _ParkingScreenState extends State<ParkingScreen>
   }
 
   void _initSlots() {
-    const ids = ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3'];
-    slots = List.generate(9, (i) {
-      final col = i % 3;
-      final row = i ~/ 3;
+    const ids = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4'];
+    slots = List.generate(8, (i) {
+
+      final col = i ~/ 4; // 0 for A (left), 1 for B (right)
+      final row = i % 4; // 0-3 for rows
       return ParkingSlot(
         id: ids[i],
-        status: (i == 1 || i == 4 || i == 7)
+        status: (i == 1 || i == 4 || i == 6)
             ? ParkingStatus.occupied
             : ParkingStatus.available,
         gridPosition: Offset(col.toDouble(), row.toDouble()),
+        type: (ids[i] == 'A4' || ids[i] == 'B4')
+            ? ParkingType.disablePerson
+            : ParkingType.normal,
       );
     });
   }
@@ -210,25 +214,22 @@ class _ParkingScreenState extends State<ParkingScreen>
   }
 
   Widget _buildSlotGrid(double w, double h) {
-    // Slot grid sits in the upper portion, leaving room for entrance/exit labels
-    final topPad = h * 0.10;
-    final bottomPad = h * 0.10;
-    final gridH = h - topPad - bottomPad;
-    final gridW = w * 0.92;
+    // Slot grid sits in the middle portion
+    final gridW = w * 0.94;
+    final gridH = h * 0.65; // Reduced height to keep slots horizontal-ish
+    final topPad = (h - gridH) / 2;
     final startX = (w - gridW) / 2;
 
-    // 3 columns with a lane in the middle → col 0, lane, col1, lane, col2
-    // We split gridW into: slot | lane | slot | lane | slot
-    const laneRatio = 0.10;
-    const slotRatio = (1 - laneRatio * 2) / 3;
-    final slotW = gridW * slotRatio;
+    // 2 columns with a wide lane in the middle
+    const laneRatio = 0.32;
+    const sideRatio = (1 - laneRatio) / 2;
+    final slotW = gridW * sideRatio;
     final laneW = gridW * laneRatio;
 
-    // 3 rows with a horizontal lane between → row0 lane row1 lane row2
-    const hLaneRatio = 0.08;
-    const rowRatio = (1 - hLaneRatio * 2) / 3;
-    final slotH = gridH * rowRatio;
-    final laneH = gridH * hLaneRatio;
+    // 4 rows
+    final rowCount = 4;
+    final slotH = gridH / rowCount;
+    const verticalGap = 8.0;
 
     List<Widget> positioned = [];
     for (final slot in slots) {
@@ -236,14 +237,14 @@ class _ParkingScreenState extends State<ParkingScreen>
       final row = slot.gridPosition.dy.toInt();
 
       final x = startX + col * (slotW + laneW);
-      final y = topPad + row * (slotH + laneH);
+      final y = topPad + row * slotH;
 
       positioned.add(
         Positioned(
           left: x,
-          top: y,
+          top: y + verticalGap / 2,
           width: slotW,
-          height: slotH,
+          height: slotH - verticalGap,
           child: ParkingSlotWidget(
             slot: slot,
             isSelected: selectedSlotId == slot.id,

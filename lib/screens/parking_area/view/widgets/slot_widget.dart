@@ -83,9 +83,7 @@ class _ParkingSlotWidgetState extends State<ParkingSlotWidget>
                 color: baseColor,
                 borderRadius: BorderRadius.circular(0),
                 border: Border.all(
-                  color: widget.isSelected
-                      ? selectedColor
-                      : glowColor,
+                  color: widget.isSelected ? selectedColor : glowColor,
                   width: widget.isSelected ? 2.5 : 1.5,
                 ),
                 boxShadow: [
@@ -133,18 +131,25 @@ class _ParkingSlotWidgetState extends State<ParkingSlotWidget>
                   scale: isOccupied ? 1.0 : 0.3,
                   duration: const Duration(milliseconds: 400),
                   curve: Curves.elasticOut,
-                  child: const _CarIcon(),
+                  child: RotatedBox(
+                    quarterTurns: widget.slot.gridPosition.dx == 0 ? 1 : 3,
+                    child: const _CarIcon(),
+                  ),
                 ),
               ),
             ),
-            // Available check
+            // Available check or Accessibility Icon
             Center(
               child: AnimatedOpacity(
-                opacity: isOccupied ? 0.0 : 0.3,
+                opacity: widget.slot.type == ParkingType.disablePerson
+                    ? 0.35
+                    : (isOccupied ? 0.0 : 0.3),
                 duration: const Duration(milliseconds: 400),
-                child: const Icon(
-                  Icons.check_circle_outline,
-                  color: Color(0xFFFFFFFF),
+                child: Icon(
+                  widget.slot.type == ParkingType.disablePerson
+                      ? Icons.accessible
+                      : Icons.check_circle_outline,
+                  color: const Color(0xFFFFFFFF),
                   size: 40,
                 ),
               ),
@@ -162,15 +167,15 @@ class _SlotMarkingPainter extends CustomPainter {
     final paint = Paint()
       ..color = Colors.white.withOpacity(0.08)
       ..strokeWidth = 1;
-    // Side lines
+    // Top and bottom marking lines for horizontal slots
     canvas.drawLine(
-      Offset(4, size.height * 0.2),
-      Offset(4, size.height * 0.8),
+      Offset(size.width * 0.2, 4),
+      Offset(size.width * 0.8, 4),
       paint,
     );
     canvas.drawLine(
-      Offset(size.width - 4, size.height * 0.2),
-      Offset(size.width - 4, size.height * 0.8),
+      Offset(size.width * 0.2, size.height - 4),
+      Offset(size.width * 0.8, size.height - 4),
       paint,
     );
   }
@@ -187,4 +192,3 @@ class _CarIcon extends StatelessWidget {
     return Image.asset('assets/images/car.png');
   }
 }
-

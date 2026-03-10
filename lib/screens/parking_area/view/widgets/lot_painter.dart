@@ -23,25 +23,23 @@ class ParkingLotPainter extends CustomPainter {
   Rect _slotRect(int col, int row) {
     final w = canvasSize.width;
     final h = canvasSize.height;
-    final topPad = h * 0.10;
-    final bottomPad = h * 0.10;
-    final gridH = h - topPad - bottomPad;
-    final gridW = w * 0.92;
+    final gridW = w * 0.94;
+    final gridH = h * 0.65;
+    final topPad = (h - gridH) / 2;
     final startX = (w - gridW) / 2;
 
-    const laneRatio = 0.10;
-    const slotRatio = (1 - laneRatio * 2) / 3;
-    final slotW = gridW * slotRatio;
+    const laneRatio = 0.32;
+    const sideRatio = (1 - laneRatio) / 2;
+    final slotW = gridW * sideRatio;
     final laneW = gridW * laneRatio;
 
-    const hLaneRatio = 0.08;
-    const rowRatio = (1 - hLaneRatio * 2) / 3;
-    final slotH = gridH * rowRatio;
-    final laneH = gridH * hLaneRatio;
+    final rowCount = 4;
+    final slotH = gridH / rowCount;
+    const verticalGap = 8.0;
 
     final x = startX + col * (slotW + laneW);
-    final y = topPad + row * (slotH + laneH);
-    return Rect.fromLTWH(x, y, slotW, slotH);
+    final y = topPad + row * slotH + verticalGap / 2;
+    return Rect.fromLTWH(x, y, slotW, slotH - verticalGap);
   }
 
   Offset _slotCenter(int col, int row) {
@@ -64,33 +62,22 @@ class ParkingLotPainter extends CustomPainter {
     final lanePaint = Paint()..color = const Color(0xFF515151);
     final w = size.width;
     final h = size.height;
-    final gridH = h * 0.80;
-
-    final topPad = h * 0.10;
-    final gridW = w * 0.92;
+    final gridW = w * 0.94;
+    final gridH = h * 0.65;
+    final topPad = (h - gridH) / 2;
     final startX = (w - gridW) / 2;
 
-    const laneRatio = 0.10;
-    const slotRatio = (1 - laneRatio * 2) / 3;
-    final slotW = gridW * slotRatio;
+    const laneRatio = 0.32;
+    const sideRatio = (1 - laneRatio) / 2;
+    final slotW = gridW * sideRatio;
     final laneW = gridW * laneRatio;
 
-    const hLaneRatio = 0.08;
-    const rowRatio = (1 - hLaneRatio * 2) / 3;
-    final slotH = gridH * rowRatio;
-    final laneH = gridH * hLaneRatio;
-
-    // Vertical lanes
-    for (int i = 0; i < 2; i++) {
-      final x = startX + (i + 1) * slotW + i * laneW;
-      canvas.drawRect(Rect.fromLTWH(x, topPad, laneW, gridH), lanePaint);
-    }
-
-    // Horizontal lanes
-    for (int i = 0; i < 2; i++) {
-      final y = topPad + (i + 1) * slotH + i * laneH;
-      canvas.drawRect(Rect.fromLTWH(startX, y, gridW, laneH), lanePaint);
-    }
+    // Central Vertical lane
+    final x = startX + slotW;
+    canvas.drawRect(
+      Rect.fromLTWH(x, topPad - 30, laneW, gridH + 60),
+      lanePaint,
+    );
   }
 
   void _drawRoadLanes(Canvas canvas, Size size) {
@@ -101,21 +88,25 @@ class ParkingLotPainter extends CustomPainter {
 
     final w = size.width;
     final h = size.height;
-    final gridH = h * 0.80;
-    final topPad = h * 0.10;
-    final gridW = w * 0.92;
+    final gridW = w * 0.94;
+    final gridH = h * 0.65;
+    final topPad = (h - gridH) / 2;
     final startX = (w - gridW) / 2;
 
-    const laneRatio = 0.10;
-    const slotRatio = (1 - laneRatio * 2) / 3;
-    final slotW = gridW * slotRatio;
+    const laneRatio = 0.32;
+    const sideRatio = (1 - laneRatio) / 2;
+    final slotW = gridW * sideRatio;
     final laneW = gridW * laneRatio;
 
-    // Center dashes in vertical lanes
-    for (int i = 0; i < 2; i++) {
-      final cx = startX + (i + 1) * slotW + i * laneW + laneW / 2;
-      _drawDashedVertLine(canvas, dashPaint, cx, topPad, topPad + gridH);
-    }
+    // Center dashes in central vertical lane
+    final cx = startX + slotW + laneW / 2;
+    _drawDashedVertLine(
+      canvas,
+      dashPaint,
+      cx,
+      topPad - 20,
+      topPad + gridH + 20,
+    );
   }
 
   void _drawDashedVertLine(
@@ -147,22 +138,21 @@ class ParkingLotPainter extends CustomPainter {
 
     final w = size.width;
     final h = size.height;
-    final gridH = h * 0.80;
-    final topPad = h * 0.10;
-    final gridW = w * 0.92;
+    final gridW = w * 0.94;
+    final gridH = h * 0.65;
+    final topPad = (h - gridH) / 2;
     final startX = (w - gridW) / 2;
 
-    const laneRatio = 0.10;
-    const slotRatio = (1 - laneRatio * 2) / 3;
-    final slotW = gridW * slotRatio;
+    const laneRatio = 0.32;
+    const sideRatio = (1 - laneRatio) / 2;
+    final slotW = gridW * sideRatio;
     final laneW = gridW * laneRatio;
 
-    // Downward arrows in vertical lanes (entrance → exit flow)
-    for (int i = 0; i < 2; i++) {
-      final cx = startX + (i + 1) * slotW + i * laneW + laneW / 2;
-      _drawArrowDown(canvas, arrowPaint, cx, topPad + gridH * 0.3);
-      _drawArrowDown(canvas, arrowPaint, cx, topPad + gridH * 0.65);
-    }
+    // Downward arrows in central vertical lane
+    final cx = startX + slotW + laneW / 2;
+    _drawArrowDown(canvas, arrowPaint, cx, topPad + gridH * 0.2);
+    _drawArrowDown(canvas, arrowPaint, cx, topPad + gridH * 0.5);
+    _drawArrowDown(canvas, arrowPaint, cx, topPad + gridH * 0.8);
   }
 
   void _drawArrowDown(Canvas canvas, Paint paint, double cx, double cy) {
@@ -211,49 +201,42 @@ class ParkingLotPainter extends CustomPainter {
   ) {
     final h = size.height;
     final w = size.width;
-    final gridH = h * 0.80;
-    final topPad = h * 0.10;
-    final gridW = w * 0.92;
+    final gridW = w * 0.94;
+    final gridH = h * 0.65;
+    final topPad = (h - gridH) / 2;
     final startX = (w - gridW) / 2;
 
-    const laneRatio = 0.10;
-    const slotRatio = (1 - laneRatio * 2) / 3;
-    final slotW = gridW * slotRatio;
+    const laneRatio = 0.32;
+    const sideRatio = (1 - laneRatio) / 2;
+    final slotW = gridW * sideRatio;
     final laneW = gridW * laneRatio;
 
-    const hLaneRatio = 0.08;
-    const rowRatio = (1 - hLaneRatio * 2) / 3;
-    final slotH = gridH * rowRatio;
-    final laneH = gridH * hLaneRatio;
+    // Central lane X
+    final laneX = startX + slotW + laneW * 0.5;
 
-    // Lane center X for each vertical lane (between col 0-1 and 1-2)
-    final lane0X = startX + slotW + laneW * 0.5;
-    final lane1X = startX + 2 * slotW + laneW * 1.5;
+    // Target vertical position (center of target row)
+    final rowCount = 4;
+    final slotH = gridH / rowCount;
+    final targetY = topPad + (row + 0.5) * slotH;
 
-    // Horizontal lane Y centers
-    final hLane0Y = topPad + slotH + laneH * 0.5;
-    final hLane1Y = topPad + 2 * slotH + laneH * 1.5;
-
-    // Choose nearest vertical lane
-    final laneX = col <= 1 ? lane0X : lane1X;
-
-    // Choose h-lane above target row
-    double hLaneY;
-    if (row == 0) {
-      hLaneY = topPad - laneH; // above grid, enter from top
-    } else if (row == 1) {
-      hLaneY = hLane0Y;
-    } else {
-      hLaneY = hLane1Y;
-    }
-
-    return [
+    final List<Offset> points = [
       start,
       Offset(laneX, start.dy),
-      Offset(laneX, hLaneY),
-      Offset(target.dx, hLaneY),
+      Offset(laneX, targetY),
       target,
     ];
+
+    // Filter out identical consecutive points to avoid 0-length segments
+    final List<Offset> uniquePoints = [];
+    if (points.isNotEmpty) {
+      uniquePoints.add(points.first);
+      for (int i = 1; i < points.length; i++) {
+        if (points[i] != points[i - 1]) {
+          uniquePoints.add(points[i]);
+        }
+      }
+    }
+    return uniquePoints;
   }
 
   void _drawGlowingPath(Canvas canvas, List<Offset> path) {
@@ -293,6 +276,8 @@ class ParkingLotPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final totalLen = _pathLength(path);
+    if (totalLen <= 0) return;
+
     const spacing = 18.0;
     final offset = pathProgress * spacing;
     double traveled = offset;
@@ -343,10 +328,14 @@ class ParkingLotPainter extends CustomPainter {
   }
 
   Offset _pointAtDistance(List<Offset> points, double distance) {
+    if (points.isEmpty) return Offset.zero;
+    if (distance <= 0) return points.first;
+
     double remaining = distance;
     for (int i = 1; i < points.length; i++) {
       final seg = points[i] - points[i - 1];
       final len = seg.distance;
+      if (len == 0) continue;
       if (remaining <= len) {
         return points[i - 1] + (seg / len) * remaining;
       }
