@@ -26,13 +26,9 @@ class _ParkingSlotWidgetState extends State<ParkingSlotWidget>
   late AnimationController _scaleCtrl;
   late Animation<double> _scaleAnim;
 
-  bool _tapped = false;
-  ParkingStatus? _prevStatus;
-
   @override
   void initState() {
     super.initState();
-    _prevStatus = widget.slot.status;
     _scaleCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 150),
@@ -108,9 +104,8 @@ class _ParkingSlotWidgetState extends State<ParkingSlotWidget>
             Positioned.fill(child: CustomPaint(painter: _SlotMarkingPainter())),
             // ID label
             Positioned(
-              top: 5,
-              left: 0,
-              right: 0,
+              top: 2,
+              left: 3,
               child: Text(
                 widget.slot.id,
                 textAlign: TextAlign.center,
@@ -123,7 +118,11 @@ class _ParkingSlotWidgetState extends State<ParkingSlotWidget>
               ),
             ),
             // Car icon with fade animation
-            Center(
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: -10,
               child: AnimatedOpacity(
                 opacity: isOccupied ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 400),
@@ -132,14 +131,20 @@ class _ParkingSlotWidgetState extends State<ParkingSlotWidget>
                   duration: const Duration(milliseconds: 400),
                   curve: Curves.elasticOut,
                   child: RotatedBox(
-                    quarterTurns: widget.slot.gridPosition.dx == 0 ? 1 : 3,
+                    quarterTurns: widget.slot.gridPosition.dx.toInt() % 2 == 0
+                        ? 1
+                        : 3,
                     child: const _CarIcon(),
                   ),
                 ),
               ),
             ),
             // Available check or Accessibility Icon
-            Center(
+            Positioned(
+              top: 10,
+              left: 20,
+              right: 0,
+              bottom: 0,
               child: AnimatedOpacity(
                 opacity: widget.slot.type == ParkingType.disablePerson
                     ? 0.35
@@ -150,7 +155,7 @@ class _ParkingSlotWidgetState extends State<ParkingSlotWidget>
                       ? Icons.accessible
                       : Icons.check_circle_outline,
                   color: const Color(0xFFFFFFFF),
-                  size: 40,
+                  size: 30,
                 ),
               ),
             ),

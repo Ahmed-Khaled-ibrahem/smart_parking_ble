@@ -48,22 +48,31 @@ class _ParkingScreenState extends State<ParkingScreen>
   }
 
   void _initSlots() {
-    const ids = ['A1', 'A2', 'A3', 'A4', 'B1', 'B2', 'B3', 'B4'];
-    slots = List.generate(8, (i) {
+    slots = [];
+    final blockLabels = ['A', 'B', 'C', 'D'];
+    for (int b = 0; b < 4; b++) {
+      final blockX = b % 2; // 0=Left, 1=Right
+      final blockY = b ~/ 2; // 0=Top, 1=Bottom
+      for (int i = 0; i < 10; i++) {
+        final colInBlock = i ~/ 5; // 0, 1
+        final rowInBlock = i % 5; // 0, 1, 2, 3, 4
 
-      final col = i ~/ 4; // 0 for A (left), 1 for B (right)
-      final row = i % 4; // 0-3 for rows
-      return ParkingSlot(
-        id: ids[i],
-        status: (i == 1 || i == 4 || i == 6)
-            ? ParkingStatus.occupied
-            : ParkingStatus.available,
-        gridPosition: Offset(col.toDouble(), row.toDouble()),
-        type: (ids[i] == 'A4' || ids[i] == 'B4')
-            ? ParkingType.disablePerson
-            : ParkingType.normal,
-      );
-    });
+        final globalCol = blockX * 2 + colInBlock;
+        final globalRow = blockY * 5 + rowInBlock;
+
+        final id = '${blockLabels[b]}${i + 1}';
+        slots.add(
+          ParkingSlot(
+            id: id,
+            status: (i == 1 || i == 6 || (b == 1 && i == 7))
+                ? ParkingStatus.occupied
+                : ParkingStatus.available,
+            gridPosition: Offset(globalCol.toDouble(), globalRow.toDouble()),
+            type: (i == 4) ? ParkingType.disablePerson : ParkingType.normal,
+          ),
+        );
+      }
+    }
   }
 
   void _onSlotTap(String id) {
@@ -118,16 +127,12 @@ class _ParkingScreenState extends State<ParkingScreen>
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Zone Alpha — Level B1',
-                style: TextStyle(fontSize: 12, letterSpacing: 1.2),
-              ),
-            ],
+          Expanded(
+            child: Text(
+              'Smart Parking — 4 Blocks Area',
+              style: TextStyle(fontSize: 12, letterSpacing: 1.2),
+            ),
           ),
-          const Spacer(),
           _statBadge('$available', 'FREE', const Color(0xFF00934B)),
           const SizedBox(width: 10),
           _statBadge('$occupied', 'BUSY', const Color(0xFFFF5252)),
@@ -214,30 +219,53 @@ class _ParkingScreenState extends State<ParkingScreen>
   }
 
   Widget _buildSlotGrid(double w, double h) {
-    // Slot grid sits in the middle portion
-    final gridW = w * 0.94;
-    final gridH = h * 0.65; // Reduced height to keep slots horizontal-ish
+    // Layout parameters (must match LotPainter)
+    final gridW = w * 0.96;
+    final gridH = h * 0.88; // Reduced slightly to avoid label overlap
     final topPad = (h - gridH) / 2;
     final startX = (w - gridW) / 2;
 
-    // 2 columns with a wide lane in the middle
-    const laneRatio = 0.32;
-    const sideRatio = (1 - laneRatio) / 2;
-    final slotW = gridW * sideRatio;
-    final laneW = gridW * laneRatio;
+    // Width ratios
+    const slotWRatio = 0.16;
+    const internalLaneRatio = 0.12;
+    const mainVerticalRoadRatio = 0.14;
+    // Height ratios
+    const slotHRatio = 0.08; // Adjusted to fit 5 rows + gap in 0.88 gridH
+    const horizontalGapRatio = 0.20; // Re-adjusted gap for better separation
 
-    // 4 rows
-    final rowCount = 4;
-    final slotH = gridH / rowCount;
-    const verticalGap = 8.0;
+    final slotW = gridW * slotWRatio;
+    final internalLaneW = gridW * internalLaneRatio;
+    final mainVRoadW = gridW * mainVerticalRoadRatio;
+    final slotH = gridH * slotHRatio;
+    final horizontalGap = gridH * horizontalGapRatio;
+
+    const verticalGap = 6.0;
 
     List<Widget> positioned = [];
     for (final slot in slots) {
-      final col = slot.gridPosition.dx.toInt();
-      final row = slot.gridPosition.dy.toInt();
+      final globalCol = slot.gridPosition.dx.toInt();
+      final globalRow = slot.gridPosition.dy.toInt();
 
-      final x = startX + col * (slotW + laneW);
-      final y = topPad + row * slotH;
+      // Calculate X
+      double x = startX;
+      if (globalCol == 0) {
+        x = startX;
+      } else if (globalCol == 1) {
+        x = startX + slotW + internalLaneW;
+      } else if (globalCol == 2) {
+        x = startX + 2 * slotW + internalLaneW + mainVRoadW;
+      } else if (globalCol == 3) {
+        x = startX + 3 * slotW + 2 * internalLaneW + mainVRoadW;
+      }
+
+      // Calculate Y
+      double y = topPad;
+      if (globalRow < 5) {
+        y = topPad + globalRow * slotH;
+      } else {
+        // Shift lower blocks down by the gap amount
+        y = topPad + globalRow * slotH + horizontalGap;
+      }
 
       positioned.add(
         Positioned(
