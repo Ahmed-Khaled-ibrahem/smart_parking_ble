@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "273247794856",
+    "firebase_url": "https://mawqifi-81e4b-default-rtdb.firebaseio.com",
+    "project_id": "mawqifi-81e4b",
+    "storage_bucket": "mawqifi-81e4b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:273247794856:android:8d70ce9c33eaaa1889749d",
+        "android_client_info": {
+          "package_name": "com.smart_parking_ble.smart_parking_ble"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAJ8utxrbBXFkij93R0qaObWlN2GSkId68"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

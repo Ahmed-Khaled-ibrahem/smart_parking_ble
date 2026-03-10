@@ -1,0 +1,190 @@
+import 'package:flutter/material.dart';
+import '../../model/slot.dart';
+
+class ParkingSlotWidget extends StatefulWidget {
+  final ParkingSlot slot;
+  final bool isSelected;
+  final AnimationController pulseAnimation;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  const ParkingSlotWidget({
+    super.key,
+    required this.slot,
+    required this.isSelected,
+    required this.pulseAnimation,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  @override
+  State<ParkingSlotWidget> createState() => _ParkingSlotWidgetState();
+}
+
+class _ParkingSlotWidgetState extends State<ParkingSlotWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _scaleCtrl;
+  late Animation<double> _scaleAnim;
+
+  bool _tapped = false;
+  ParkingStatus? _prevStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _prevStatus = widget.slot.status;
+    _scaleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scaleAnim = Tween<double>(
+      begin: 1.0,
+      end: 1.06,
+    ).animate(CurvedAnimation(parent: _scaleCtrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _scaleCtrl.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() {
+    _scaleCtrl.forward().then((_) => _scaleCtrl.reverse());
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isOccupied = widget.slot.status == ParkingStatus.occupied;
+    final baseColor = isOccupied
+        ? const Color(0xFFB71C1C)
+        : const Color(0xFF1B5E20);
+    final glowColor = isOccupied
+        ? const Color(0xFFFF5252)
+        : const Color(0xFF00E676);
+    final selectedColor = const Color(0xFF00E5FF);
+
+    return GestureDetector(
+      onTap: _handleTap,
+      onLongPress: widget.onLongPress,
+      child: AnimatedBuilder(
+        animation: Listenable.merge([_scaleCtrl, widget.pulseAnimation]),
+        builder: (context, child) {
+          final pulse = isOccupied
+              ? 1.0
+              : 0.6 + 0.4 * widget.pulseAnimation.value;
+          return Transform.scale(
+            scale: _scaleAnim.value,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeInOut,
+              decoration: BoxDecoration(
+                color: baseColor,
+                borderRadius: BorderRadius.circular(0),
+                border: Border.all(
+                  color: widget.isSelected
+                      ? selectedColor
+                      : glowColor,
+                  width: widget.isSelected ? 2.5 : 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.isSelected
+                        ? selectedColor.withOpacity(0.5)
+                        : glowColor.withOpacity(
+                            isOccupied ? 0.2 : pulse * 0.35,
+                          ),
+                    blurRadius: widget.isSelected ? 14 : 8,
+                    spreadRadius: widget.isSelected ? 2 : 0,
+                  ),
+                ],
+              ),
+              child: child,
+            ),
+          );
+        },
+        child: Stack(
+          children: [
+            // Slot marking lines
+            Positioned.fill(child: CustomPaint(painter: _SlotMarkingPainter())),
+            // ID label
+            Positioned(
+              top: 5,
+              left: 0,
+              right: 0,
+              child: Text(
+                widget.slot.id,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.6),
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+            // Car icon with fade animation
+            Center(
+              child: AnimatedOpacity(
+                opacity: isOccupied ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 400),
+                child: AnimatedScale(
+                  scale: isOccupied ? 1.0 : 0.3,
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.elasticOut,
+                  child: const _CarIcon(),
+                ),
+              ),
+            ),
+            // Available check
+            Center(
+              child: AnimatedOpacity(
+                opacity: isOccupied ? 0.0 : 0.3,
+                duration: const Duration(milliseconds: 400),
+                child: const Icon(
+                  Icons.check_circle_outline,
+                  color: Color(0xFFFFFFFF),
+                  size: 40,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SlotMarkingPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.08)
+      ..strokeWidth = 1;
+    // Side lines
+    canvas.drawLine(
+      Offset(4, size.height * 0.2),
+      Offset(4, size.height * 0.8),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width - 4, size.height * 0.2),
+      Offset(size.width - 4, size.height * 0.8),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _CarIcon extends StatelessWidget {
+  const _CarIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset('assets/images/car.png');
+  }
+}
+
