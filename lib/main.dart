@@ -21,7 +21,6 @@ void main() {
         runApp(const DeactivateAppScreen());
         return;
       }
-
       // Initialize Hive
       await hiveConfig();
       // Initialize Firebase
@@ -38,14 +37,11 @@ void main() {
         logApp('^^^ Uncaught error: $details');
         FlutterError.dumpErrorToConsole(details);
       };
-
       ErrorWidget.builder = (FlutterErrorDetails details) {
         return const AppErrorWidget();
       };
-
       runApp(const ProviderScope(child: App()));
     },
-
     (error, stack) {
       logApp('@@@ Uncaught async error: $error');
       logApp(stack.toString());

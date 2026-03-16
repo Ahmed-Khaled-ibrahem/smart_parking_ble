@@ -3,5 +3,4 @@ import '../../firebase_options.dart';
 
 Future firebaseConfig() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
 }

@@ -9,14 +9,16 @@ enum NavigationMode { fromEntrance, fromCurrent }
 class ParkingSlot {
   final String id;
   ParkingStatus status;
-  final Offset gridPosition; // column, row (0-indexed)
+  final Offset gridPosition;
   ParkingType type = ParkingType.normal;
+  String? linkedToDevice;
 
   ParkingSlot({
     required this.id,
     required this.status,
     required this.gridPosition,
     this.type = ParkingType.normal,
+    this.linkedToDevice,
   });
 }
 

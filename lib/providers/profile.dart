@@ -1,0 +1,47 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../model/profile.dart';
+
+class ProfileNotifier extends Notifier<Profile?> {
+  @override
+  Profile? build() => null;
+
+  void setProfile(Profile profile) {
+    state = profile;
+  }
+
+  void update({
+    String? name,
+    String? email,
+    UserRole? role,
+    List<ParkingHistory>? parkingHistory,
+    DateTime? createdAt,
+  }) {
+    final current = state;
+    if (current == null) return;
+
+    state = Profile(
+      uid: current.uid,
+      name: name ?? current.name,
+      email: email ?? current.email,
+      role: role ?? current.role,
+      parkingHistory: parkingHistory ?? current.parkingHistory,
+      createdAt: current.createdAt,
+    );
+  }
+
+  void clear() => state = null;
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
+final profileProvider = NotifierProvider<ProfileNotifier, Profile?>(
+  ProfileNotifier.new,
+);
+
+final profileRoleProvider = Provider<UserRole?>(
+  (ref) => ref.watch(profileProvider)?.role,
+);
+
+final isLoggedInProvider = Provider<bool>(
+  (ref) => ref.watch(profileProvider) != null,
+);
