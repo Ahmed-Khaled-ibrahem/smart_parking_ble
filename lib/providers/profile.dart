@@ -15,6 +15,7 @@ class ProfileNotifier extends Notifier<Profile?> {
     UserRole? role,
     List<ParkingHistory>? parkingHistory,
     DateTime? createdAt,
+    CurrentParking? currentParking,
   }) {
     final current = state;
     if (current == null) return;
@@ -26,6 +27,7 @@ class ProfileNotifier extends Notifier<Profile?> {
       role: role ?? current.role,
       parkingHistory: parkingHistory ?? current.parkingHistory,
       createdAt: current.createdAt,
+      currentParking: currentParking ?? current.currentParking,
     );
   }
 

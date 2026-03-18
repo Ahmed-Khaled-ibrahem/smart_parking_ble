@@ -6,7 +6,6 @@ import 'package:toastification/toastification.dart';
 import '../screens/admin/admin_screen.dart';
 import '../screens/current_parking/current_parking_details.dart';
 import '../screens/find_parking/find_parking.dart';
-import '../screens/find_parking/navigate_to_parking.dart';
 import '../screens/history/parking_history.dart';
 import '../screens/login/view/login_screen.dart';
 import '../screens/login/view/register_screen.dart';
@@ -32,7 +31,7 @@ class App extends ConsumerWidget {
           '/login': (context) => const LoginScreen(),
           '/home': (context) => const HomeScreen(),
           '/find': (context) => const AvailableParkingScreen(),
-          '/navigate': (context) => const ParkingNavigationScreen(),
+          // '/navigate': (context) => const ParkingNavigationScreen(),
           '/history': (context) => const ParkingHistoryScreen(),
           '/current': (context) => const CurrentParkingScreen(),
           '/navigate_back': (context) => const ParkingScreen(),

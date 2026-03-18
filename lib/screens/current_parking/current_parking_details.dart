@@ -1,20 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:smart_parking_ble/screens/current_parking/timer_widget.dart';
+import '../../model/profile.dart';
+import '../../providers/profile.dart';
 
-class CurrentParkingScreen extends StatelessWidget {
+class CurrentParkingScreen extends ConsumerWidget {
   const CurrentParkingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const Color primaryGreen = Color(0xFF2D5A47);
-    const Color secondaryGreen = Color(0xFF8BAA9B);
     const Color lightGreenBg = Color(0xFFD1E0D7);
     const Color darkGreenBtn = Color(0xFF1E4D3B);
+
+    final CurrentParking? currentParking = ref
+        .watch(profileProvider)
+        ?.currentParking;
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Top Bar
               Padding(
@@ -73,199 +81,97 @@ class CurrentParkingScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Parking Info Card
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: lightGreenBg,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Column(
-                    children: [
-                      InfoRow(label: 'SAVED PARKING', value: 'A-12'),
-                      SizedBox(height: 8),
-                      InfoRow(label: 'LEVEL', value: 'B1'),
-                      SizedBox(height: 8),
-                      InfoRow(label: 'PARKED AT', value: '12:30 PM'),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Timer Card
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    color: lightGreenBg,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'TIMER',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+              // Parking Inf Card
+              currentParking == null
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.local_parking, size: 200),
+                        const Text(
+                          'No Current Parking',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '3:34',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                        const Text(
+                          'Save Parking to see it here',
+                          style: TextStyle(fontSize: 12),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Reminder and Pause Row
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: lightGreenBg,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'REMIND ME AFTER',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: lightGreenBg,
+                              borderRadius: BorderRadius.circular(24),
                             ),
-                            Icon(Icons.arrow_drop_down, color: primaryGreen),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 1,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: darkGreenBtn,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'PAUSE',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                            child: Column(
+                              children: [
+                                InfoRow(
+                                  label: 'SAVED PARKING',
+                                  value: currentParking.parkingId,
+                                ),
+                                SizedBox(height: 8),
+                                InfoRow(
+                                  label: 'PARKING AREA',
+                                  value: currentParking.parkingAreaId,
+                                ),
+                                SizedBox(height: 8),
+                                InfoRow(
+                                  label: 'PARKED AT',
+                                  value: currentParking.parkedAt
+                                      .toString()
+                                      .split(' ')[0],
+                                ),
+                                SizedBox(height: 8),
+                                InfoRow(
+                                  label: 'Time',
+                                  value: currentParking.parkedAt
+                                      .toString()
+                                      .split(' ')[1]
+                                      .split('.')[0],
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 24),
+                        SessionTimerWidget(),
+                        const SizedBox(height: 35),
+                        // Guide Me Back Button
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                          child: ElevatedButton(
+                            onPressed: () {},
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: darkGreenBtn,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 40,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                            ),
+                            child: const Text(
+                              'GUIDE ME BACK',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // Reminder Options List
-              Container(
-                width: 80,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: lightGreenBg,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Column(
-                  children: [
-                    Text(
-                      '15M',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '30M',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '1H',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '2H',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              // Guide Me Back Button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: darkGreenBtn,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 40,
-                      vertical: 14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                  ),
-                  child: const Text(
-                    'GUIDE ME BACK',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
             ],
           ),
         ),

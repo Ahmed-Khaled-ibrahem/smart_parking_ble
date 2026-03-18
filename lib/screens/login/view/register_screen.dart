@@ -361,6 +361,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       createdAt: DateTime.now(),
       role: UserRole.user,
       parkingHistory: [],
+      currentParking: null,
     );
     FirebaseFirestore.instance
         .collection('profiles')

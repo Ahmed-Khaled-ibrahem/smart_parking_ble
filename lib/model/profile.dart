@@ -42,6 +42,34 @@ class ParkingHistory {
   }
 }
 
+class CurrentParking {
+  final DateTime parkedAt;
+  final String parkingId;
+  final String parkingAreaId;
+
+  CurrentParking({
+    required this.parkedAt,
+    required this.parkingId,
+    required this.parkingAreaId,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'parkedAt': Timestamp.fromDate(parkedAt),
+      'parkingId': parkingId,
+      'parkingAreaId': parkingAreaId,
+    };
+  }
+
+  factory CurrentParking.fromJson(Map<String, dynamic> json) {
+    return CurrentParking(
+      parkedAt: json['parkedAt'].toDate(),
+      parkingId: json['parkingId'] as String,
+      parkingAreaId: json['parkingAreaId'] as String,
+    );
+  }
+}
+
 class Profile {
   final String? uid;
   final String? email;
@@ -49,6 +77,7 @@ class Profile {
   final DateTime? createdAt;
   final UserRole? role;
   final List<ParkingHistory> parkingHistory;
+  final CurrentParking? currentParking;
 
   Profile({
     required this.uid,
@@ -57,6 +86,7 @@ class Profile {
     required this.createdAt,
     required this.role,
     required this.parkingHistory,
+    required this.currentParking,
   });
 
   Map<String, dynamic> toJson() {
@@ -67,6 +97,7 @@ class Profile {
       'createdAt': Timestamp.fromDate(createdAt!),
       'role': role!.name,
       'parkingHistory': parkingHistory.map((e) => e.toJson()).toList(),
+      'currentParking': currentParking?.toJson(),
     };
   }
 
@@ -80,6 +111,9 @@ class Profile {
       parkingHistory: (json['parkingHistory'] as List)
           .map((e) => ParkingHistory.fromJson(e))
           .toList(),
+      currentParking: json['current_parking'] == null
+          ? null
+          : CurrentParking.fromJson(json['current_parking']),
     );
   }
 }

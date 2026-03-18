@@ -1,13 +1,7 @@
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-
-enum ParkingStatus { free, occupied }
-
-class ParkingSpot {
-  final String id;
-  final ParkingStatus status;
-
-  const ParkingSpot({required this.id, required this.status});
-}
+import '../admin/real_parking_slot.dart';
+import 'navigate_to_parking.dart';
 
 class AvailableParkingScreen extends StatefulWidget {
   const AvailableParkingScreen({super.key});
@@ -19,21 +13,28 @@ class AvailableParkingScreen extends StatefulWidget {
 class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
   static const Color primaryGreen = Color(0xFF2D6A4F);
   static const Color lightGreen = Color(0xFFD8EAD3);
-  static const Color cardGreen = Color(0xFFDDEDD8);
-  static const Color chipGreen = Color(0xFF52796F);
 
-  // Toggle this to simulate empty state
-  bool _hasSpots = true;
+  Stream<List<RealParkingUnit>> streamUnits() {
+    final ref = FirebaseDatabase.instance.ref('units');
 
-  final List<ParkingSpot> _spots = const [
-    ParkingSpot(id: 'A-01', status: ParkingStatus.free),
-    ParkingSpot(id: 'A-02', status: ParkingStatus.free),
-    ParkingSpot(id: 'A-03', status: ParkingStatus.occupied),
-    ParkingSpot(id: 'A-04', status: ParkingStatus.free),
-    ParkingSpot(id: 'A-05', status: ParkingStatus.occupied),
-    ParkingSpot(id: 'A-06', status: ParkingStatus.occupied),
-    ParkingSpot(id: 'A-07', status: ParkingStatus.free),
-  ];
+    return ref.onValue.map((event) {
+      final data = event.snapshot.value as Map<dynamic, dynamic>?;
+
+      if (data == null) return [];
+
+      return data.entries.map((e) {
+        final mac = e.key.toString();
+        final unit = Map<String, dynamic>.from(e.value);
+
+        return RealParkingUnit(
+          mac: mac,
+          label: unit['label'] ?? '',
+          status: unit['status'] ?? '',
+          linkedTo: unit['linkedTo'] ?? '',
+        );
+      }).toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,19 +65,10 @@ class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: const BoxDecoration(
-                      color: primaryGreen,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.location_on,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: Colors.transparent,
+                    child: Image.asset('assets/images/logo/logo.png'),
                   ),
                   const SizedBox(width: 8),
                   const Text(
@@ -88,24 +80,25 @@ class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
                       letterSpacing: 1.2,
                     ),
                   ),
-                  const Spacer(),
-                  // Dev toggle button
-                  TextButton(
-                    onPressed: () => setState(() => _hasSpots = !_hasSpots),
-                    child: Text(
-                      _hasSpots ? 'Show Empty' : 'Show Spots',
-                      style: const TextStyle(color: primaryGreen, fontSize: 11),
-                    ),
-                  ),
                 ],
               ),
             ),
-
             // ── Body ─────────────────────────────────────────────
-            Expanded(
-              child: _hasSpots
-                  ? _SpotsAvailableView(spots: _spots)
-                  : const _NoSpotsView(),
+            StreamBuilder<List<RealParkingUnit>>(
+              stream: streamUnits(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final spots = snapshot.data!;
+
+                if (spots.isEmpty) {
+                  return const _NoSpotsView();
+                }
+
+                return Expanded(child: _SpotsAvailableView(spots: spots));
+              },
             ),
           ],
         ),
@@ -118,11 +111,10 @@ class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
 // State 1: Spots available
 // ─────────────────────────────────────────────────────────────
 class _SpotsAvailableView extends StatelessWidget {
-  final List<ParkingSpot> spots;
+  final List<RealParkingUnit> spots;
 
   const _SpotsAvailableView({required this.spots});
 
-  static const Color primaryGreen = Color(0xFF2D6A4F);
   static const Color cardGreen = Color(0xFFDDEDD8);
   static const Color chipGreen = Color(0xFF52796F);
 
@@ -147,11 +139,10 @@ class _SpotsAvailableView extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(height: 12),
-
           // Sort chip
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -172,13 +163,9 @@ class _SpotsAvailableView extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 6),
-              const Icon(Icons.arrow_drop_down, color: primaryGreen, size: 22),
             ],
           ),
-
           const SizedBox(height: 14),
-
           // Spots card
           Expanded(
             child: Container(
@@ -200,7 +187,6 @@ class _SpotsAvailableView extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(height: 20),
         ],
       ),
@@ -209,20 +195,27 @@ class _SpotsAvailableView extends StatelessWidget {
 }
 
 class _ParkingSpotRow extends StatelessWidget {
-  final ParkingSpot spot;
+  final RealParkingUnit spot;
 
   const _ParkingSpotRow({required this.spot});
 
   static const Color primaryGreen = Color(0xFF2D6A4F);
 
-  bool get isFree => spot.status == ParkingStatus.free;
+  bool get isFree => spot.status == 'free';
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
         if (isFree) {
-          Navigator.pushNamed(context, '/navigate');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) {
+                return ParkingNavigationScreen(slotId: spot.label);
+              },
+            ),
+          );
         }
       },
       child: Container(
@@ -236,7 +229,7 @@ class _ParkingSpotRow extends StatelessWidget {
           children: [
             // Spot ID
             Text(
-              spot.id,
+              spot.label,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
