@@ -1,16 +1,28 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart' hide NavigationMode;
-import '../model/slot.dart';
-import 'widgets/lot_painter.dart';
-import 'widgets/slot_widget.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:smart_parking_ble/screens/find_parking/slot_widget.dart';
+import 'package:smart_parking_ble/screens/navigate_back/view/widgets/lot_painter.dart';
 
-class ParkingScreen extends StatefulWidget {
-  const ParkingScreen({super.key});
+import '../../../model/profile.dart';
+import '../../../model/slot.dart';
+import '../../../providers/profile.dart';
+import '../../admin/real_parking_slot.dart';
+import '../../find_parking/ble_scanner_widget.dart';
+
+class NavigateBackToParkingScreen extends StatefulWidget {
+  const NavigateBackToParkingScreen({super.key, required this.slotId});
+
+  final String slotId;
 
   @override
-  State<ParkingScreen> createState() => _ParkingScreenState();
+  State<NavigateBackToParkingScreen> createState() =>
+      _NavigateBackToParkingScreenState();
 }
 
-class _ParkingScreenState extends State<ParkingScreen>
+class _NavigateBackToParkingScreenState
+    extends State<NavigateBackToParkingScreen>
     with TickerProviderStateMixin {
   late List<ParkingSlot> slots;
   String? selectedSlotId;
@@ -23,6 +35,26 @@ class _ParkingScreenState extends State<ParkingScreen>
 
   // Car position along path (0.0 → 1.0)
   late Animation<double> _carProgress;
+
+  List<RealParkingUnit> realUnits = [];
+  bool slotsInitialized = false;
+  double? distance;
+
+  Future<List<RealParkingUnit>> getAllRealUnits() async {
+    final ref = FirebaseDatabase.instance.ref('units');
+    final snapshot = await ref.get();
+
+    if (!snapshot.exists) return [];
+
+    final data = snapshot.value as Map<dynamic, dynamic>;
+
+    return data.entries.map((e) {
+      return RealParkingUnit.fromJson(
+        e.key.toString(),
+        Map<String, dynamic>.from(e.value),
+      );
+    }).toList();
+  }
 
   @override
   void initState() {
@@ -47,8 +79,17 @@ class _ParkingScreenState extends State<ParkingScreen>
     )..repeat(reverse: true);
   }
 
-  void _initSlots() {
+  void moveCarTo(double target) {
+    _carMoveController.animateTo(
+      target.clamp(0.0, 1.0),
+      duration: const Duration(milliseconds: 500),
+    );
+  }
+
+  Future _initSlots() async {
+    realUnits = await getAllRealUnits();
     slots = [];
+    selectedSlotId = widget.slotId;
     final blockLabels = ['A', 'B', 'C', 'D'];
     for (int b = 0; b < 4; b++) {
       final blockX = b % 2; // 0=Left, 1=Right
@@ -64,27 +105,28 @@ class _ParkingScreenState extends State<ParkingScreen>
         slots.add(
           ParkingSlot(
             id: id,
-            status: (i == 1 || i == 6 || (b == 1 && i == 7))
-                ? ParkingStatus.occupied
-                : ParkingStatus.available,
+            status: ParkingStatus.available,
             gridPosition: Offset(globalCol.toDouble(), globalRow.toDouble()),
             type: (i == 4) ? ParkingType.disablePerson : ParkingType.normal,
           ),
         );
       }
     }
+    setState(() {
+      slotsInitialized = true;
+    });
   }
 
   void _onSlotTap(String id) {
-    setState(() {
-      if (selectedSlotId == id) {
-        selectedSlotId = null;
-        _carMoveController.reset();
-      } else {
-        selectedSlotId = id;
-        _carMoveController.forward(from: 0);
-      }
-    });
+    // setState(() {
+    //   if (selectedSlotId == id) {
+    //     selectedSlotId = null;
+    //     _carMoveController.reset();
+    //   } else {
+    //     selectedSlotId = id;
+    //     _carMoveController.forward(from: 0);
+    //   }
+    // });
   }
 
   void _toggleSlotStatus(String id) {
@@ -106,70 +148,95 @@ class _ParkingScreenState extends State<ParkingScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(child: _buildParkingLot()),
-          ],
-        ),
-      ),
-    );
+    return slotsInitialized
+        ? Column(
+            children: [
+              BleProximityWidget(
+                targetDeviceName: realUnits
+                    .where((e) => e.label == widget.slotId)
+                    .first
+                    .mac,
+                onDistanceUpdate: (double? meters) {
+                  if (meters == null) return;
+                  double mapped = 0.85 * (1 - (meters / 20));
+                  moveCarTo(mapped);
+                },
+              ),
+              Expanded(child: _buildParkingLot()),
+              SizedBox(
+                width: double.infinity,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Consumer(
+                    builder: (context, ref, child) {
+                      final profileCtrl = ref.watch(profileProvider.notifier);
+                      return Row(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              'Arrived ?',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final profile = ref.read(profileProvider);
+                                final p = CurrentParking(
+                                  parkedAt: DateTime.now(),
+                                  parkingId: widget.slotId,
+                                  parkingAreaId: 'P1',
+                                );
+                                await updateProfileToFirebase(
+                                  profile!.uid ?? 'tt',
+                                  p,
+                                );
+                                profileCtrl.removeParking();
+                                Navigator.pop(context);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(0xFF2D6A4F),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                              child: Text('Stop Navigation'),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          )
+        : Center(child: CircularProgressIndicator());
   }
 
-  Widget _buildHeader() {
-    final occupied = slots
-        .where((s) => s.status == ParkingStatus.occupied)
-        .length;
-    final available = slots.length - occupied;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Smart Parking — 4 Blocks Area',
-              style: TextStyle(fontSize: 12, letterSpacing: 1.2),
-            ),
-          ),
-          _statBadge('$available', 'FREE', const Color(0xFF00934B)),
-          const SizedBox(width: 10),
-          _statBadge('$occupied', 'BUSY', const Color(0xFFFF5252)),
-        ],
-      ),
-    );
+  Future updateProfileToFirebase(String uid, CurrentParking p) async {
+    await addToHistory(uid, p);
+    await FirebaseFirestore.instance.collection('profiles').doc(uid).update({
+      'current_parking': null,
+    });
   }
 
-  Widget _statBadge(String value, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.9), width: 1),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              color: color.withOpacity(0.8),
-              fontSize: 9,
-              letterSpacing: 1.5,
-            ),
-          ),
-        ],
-      ),
+  Future addToHistory(String uid, CurrentParking p) async {
+    final ParkingHistory parkingHistoryItem = ParkingHistory(
+      id: p.parkingAreaId,
+      name: p.parkingId,
+      startTime: p.parkedAt,
+      endTime: DateTime.now(),
     );
+    print(parkingHistoryItem.toJson());
+    await FirebaseFirestore.instance.collection('profiles').doc(uid).update({
+      'history': FieldValue.arrayUnion([parkingHistoryItem.toJson()]),
+    });
   }
 
   Widget _buildParkingLot() {
@@ -273,7 +340,7 @@ class _ParkingScreenState extends State<ParkingScreen>
           top: y + verticalGap / 2,
           width: slotW,
           height: slotH - verticalGap,
-          child: ParkingSlotWidget(
+          child: NavigateParkingSlotWidget(
             slot: slot,
             isSelected: selectedSlotId == slot.id,
             pulseAnimation: _pulseController,
@@ -292,7 +359,7 @@ class _ParkingScreenState extends State<ParkingScreen>
       children: [
         // ENTRANCE — top
         Positioned(
-          top: 10,
+          top: 0,
           left: 0,
           right: 0,
           child: Center(
@@ -301,7 +368,7 @@ class _ParkingScreenState extends State<ParkingScreen>
         ),
         // EXIT — bottom
         Positioned(
-          bottom: 10,
+          bottom: 0,
           left: 0,
           right: 0,
           child: Center(child: _gateLabel('EXIT  ▼', const Color(0xFFFF5252))),

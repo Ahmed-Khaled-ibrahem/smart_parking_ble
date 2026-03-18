@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart' hide NavigationMode;
-import '../../model/slot.dart';
+import '../../../../model/slot.dart';
 
 class ParkingLotPainter extends CustomPainter {
   final List<ParkingSlot> slots;

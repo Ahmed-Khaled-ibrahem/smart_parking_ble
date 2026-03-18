@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../parking_area/model/slot.dart';
+import '../../model/slot.dart';
 
 class ConfigurationParkingSlotWidget extends StatefulWidget {
   final ParkingSlot slot;

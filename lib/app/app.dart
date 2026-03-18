@@ -10,7 +10,7 @@ import '../screens/history/parking_history.dart';
 import '../screens/login/view/login_screen.dart';
 import '../screens/login/view/register_screen.dart';
 import '../screens/login/view/wlecome_screen.dart';
-import '../screens/parking_area/view/parking_screen.dart';
+import '../screens/navigate_back/view/parking_screen.dart';
 
 class App extends ConsumerWidget {
   const App({super.key});

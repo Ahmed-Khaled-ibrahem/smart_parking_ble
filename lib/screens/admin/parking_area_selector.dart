@@ -2,7 +2,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart' hide NavigationMode;
 import 'package:smart_parking_ble/screens/admin/real_parking_slot.dart';
 import 'package:smart_parking_ble/screens/admin/slot_configuration_widget.dart';
-import '../parking_area/model/slot.dart';
+import '../../model/slot.dart';
 import 'asphalt_painter.dart';
 
 class ParkingScreenAdmin extends StatefulWidget {

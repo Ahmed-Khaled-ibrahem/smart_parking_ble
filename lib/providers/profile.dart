@@ -9,6 +9,20 @@ class ProfileNotifier extends Notifier<Profile?> {
     state = profile;
   }
 
+  void removeParking() {
+    final current = state;
+    if (current == null) return;
+    state = Profile(
+      uid: current.uid,
+      name: current.name,
+      email: current.email,
+      role: current.role,
+      parkingHistory: current.parkingHistory,
+      createdAt: current.createdAt,
+      currentParking: null,
+    );
+  }
+
   void update({
     String? name,
     String? email,

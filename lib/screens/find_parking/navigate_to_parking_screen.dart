@@ -6,7 +6,7 @@ import 'package:smart_parking_ble/screens/find_parking/slot_widget.dart';
 import '../../model/profile.dart';
 import '../../providers/profile.dart';
 import '../admin/real_parking_slot.dart';
-import '../parking_area/model/slot.dart';
+import '../../model/slot.dart';
 import 'asphalt_paint.dart';
 import 'ble_scanner_widget.dart';
 

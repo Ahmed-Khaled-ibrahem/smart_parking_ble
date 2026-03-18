@@ -1,10 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/profile.dart';
 
-class ParkingHistoryScreen extends StatelessWidget {
+class ParkingHistoryScreen extends ConsumerWidget {
   const ParkingHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final uid = ref.watch(profileProvider)?.uid;
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -80,21 +84,13 @@ class ParkingHistoryScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: Colors.white,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.arrow_drop_down,
-                    size: 20,
-                    color: Colors.green.shade900,
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-
-            // History List Container
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -108,15 +104,63 @@ class ParkingHistoryScreen extends StatelessWidget {
                     ),
                   ),
                   padding: const EdgeInsets.all(20),
-                  child: ListView(
-                    children: const [
-                      HistoryItem(date: '2 DEC 2025', location: 'BLACK HAT'),
-                      HistoryItem(
-                        date: '30 NOV 2025',
-                        location: 'BOULEVARD WORLD',
-                      ),
-                      HistoryItem(date: '29 NOV 2025', location: 'RIYADH PARK'),
-                    ],
+                  child: StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('profiles')
+                        .doc(uid)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (!snapshot.hasData || snapshot.data == null) {
+                        return const Center(
+                          child: Text('No history available.'),
+                        );
+                      }
+
+                      final docData =
+                          snapshot.data!.data() as Map<String, dynamic>;
+                      final historyList =
+                          docData['history'] as List<dynamic>? ?? [];
+
+                      if (historyList.isEmpty) {
+                        return const Center(
+                          child: Text('No history available.'),
+                        );
+                      }
+
+                      return ListView.builder(
+                        itemCount: historyList.length,
+                        itemBuilder: (context, index) {
+                          final item =
+                              historyList[index] as Map<String, dynamic>;
+
+                          final startTime = (item['startTime'] as Timestamp)
+                              .toDate();
+                          final endTime = (item['endTime'] as Timestamp)
+                              .toDate();
+                          final name = item['name'] ?? '';
+                          final id = item['id'] ?? '';
+
+                          final dateString =
+                              '${startTime.day.toString().padLeft(2, '0')} '
+                              '${_monthString(startTime.month)} '
+                              '${startTime.year}';
+
+                          return HistoryItem(
+                            date: dateString,
+                            location: name,
+                            duration: Duration(
+                              hours: endTime.hour - startTime.hour,
+                              minutes: endTime.minute - startTime.minute,
+                              seconds: endTime.second - startTime.second,
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
               ),
@@ -126,13 +170,37 @@ class ParkingHistoryScreen extends StatelessWidget {
       ),
     );
   }
+
+  String _monthString(int month) {
+    const months = [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ];
+    return months[month - 1];
+  }
 }
 
 class HistoryItem extends StatelessWidget {
   final String date;
   final String location;
+  final Duration duration;
 
-  const HistoryItem({super.key, required this.date, required this.location});
+  const HistoryItem({
+    super.key,
+    required this.date,
+    required this.location,
+    required this.duration,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -148,13 +216,25 @@ class HistoryItem extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              date,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+            Column(
+              children: [
+                Text(
+                  date,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                Text(
+                  duration.toString(),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
             ),
             Text(
               location,

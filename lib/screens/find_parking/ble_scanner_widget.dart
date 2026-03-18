@@ -281,10 +281,10 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
                       color: _statusColor.withOpacity(0.8),
                     ),
                   ),
-                  Text(
-                    'RSSI: ${_smoothedRssi?.toInt() ?? '—'} dBm',
-                    style: _AppTheme.chipLabelStyle,
-                  ),
+                  // Text(
+                  //   'RSSI: ${_smoothedRssi?.toInt() ?? '—'} dBm',
+                  //   style: _AppTheme.chipLabelStyle,
+                  // ),
                 ],
               ),
             ],

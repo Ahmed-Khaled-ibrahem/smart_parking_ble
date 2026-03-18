@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../model/slot.dart';
+import '../../../../model/slot.dart';
 
 class ParkingSlotWidget extends StatefulWidget {
   final ParkingSlot slot;
