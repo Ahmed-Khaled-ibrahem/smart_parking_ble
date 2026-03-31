@@ -148,7 +148,11 @@ class CurrentParkingScreen extends ConsumerWidget {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24.0),
                           child: ElevatedButton(
-                            onPressed: () {},
+                            onPressed: () {
+                              // navigate to guide me back screen
+                              Navigator.pop(context);
+                              Navigator.pushNamed(context, '/navigate_back');
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: darkGreenBtn,
                               padding: const EdgeInsets.symmetric(

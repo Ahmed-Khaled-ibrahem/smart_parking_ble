@@ -4,7 +4,6 @@ import 'package:flutter/material.dart' hide NavigationMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smart_parking_ble/screens/find_parking/slot_widget.dart';
 import 'package:smart_parking_ble/screens/navigate_back/view/widgets/lot_painter.dart';
-
 import '../../../model/profile.dart';
 import '../../../model/slot.dart';
 import '../../../providers/profile.dart';
@@ -186,11 +185,13 @@ class _NavigateBackToParkingScreenState
                             child: ElevatedButton(
                               onPressed: () async {
                                 final profile = ref.read(profileProvider);
-                                final p = CurrentParking(
-                                  parkedAt: DateTime.now(),
-                                  parkingId: widget.slotId,
-                                  parkingAreaId: 'P1',
-                                );
+                                final p =
+                                    profile?.currentParking ??
+                                    CurrentParking(
+                                      parkedAt: DateTime.now(),
+                                      parkingId: widget.slotId,
+                                      parkingAreaId: 'P1',
+                                    );
                                 await updateProfileToFirebase(
                                   profile!.uid ?? 'tt',
                                   p,
@@ -233,7 +234,8 @@ class _NavigateBackToParkingScreenState
       startTime: p.parkedAt,
       endTime: DateTime.now(),
     );
-    print(parkingHistoryItem.toJson());
+    print('parked at: ${p.parkedAt}');
+    print('ended at: ${DateTime.now()}');
     await FirebaseFirestore.instance.collection('profiles').doc(uid).update({
       'history': FieldValue.arrayUnion([parkingHistoryItem.toJson()]),
     });

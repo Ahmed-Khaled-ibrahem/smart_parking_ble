@@ -12,6 +12,7 @@ class ParkingHistoryScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             // Top Bar
@@ -73,7 +74,7 @@ class ParkingHistoryScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFF8BAA9B),
+                color: const Color(0xFF698E78),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -123,7 +124,14 @@ class ParkingHistoryScreen extends ConsumerWidget {
                       final docData =
                           snapshot.data!.data() as Map<String, dynamic>;
                       final historyList =
-                          docData['history'] as List<dynamic>? ?? [];
+                          (docData['history'] as List<dynamic>? ?? [])
+                              .cast<Map<String, dynamic>>();
+
+                      historyList.sort((a, b) {
+                        final aTime = (a['startTime'] as Timestamp).toDate();
+                        final bTime = (b['startTime'] as Timestamp).toDate();
+                        return bTime.compareTo(aTime); // descending
+                      });
 
                       if (historyList.isEmpty) {
                         return const Center(
@@ -134,8 +142,7 @@ class ParkingHistoryScreen extends ConsumerWidget {
                       return ListView.builder(
                         itemCount: historyList.length,
                         itemBuilder: (context, index) {
-                          final item =
-                              historyList[index] as Map<String, dynamic>;
+                          final item = historyList[index];
 
                           final startTime = (item['startTime'] as Timestamp)
                               .toDate();
@@ -152,11 +159,8 @@ class ParkingHistoryScreen extends ConsumerWidget {
                           return HistoryItem(
                             date: dateString,
                             location: name,
-                            duration: Duration(
-                              hours: endTime.hour - startTime.hour,
-                              minutes: endTime.minute - startTime.minute,
-                              seconds: endTime.second - startTime.second,
-                            ),
+                            endedAt: endTime,
+                            startedAt: startTime,
                           );
                         },
                       );
@@ -193,13 +197,15 @@ class ParkingHistoryScreen extends ConsumerWidget {
 class HistoryItem extends StatelessWidget {
   final String date;
   final String location;
-  final Duration duration;
+  final DateTime endedAt;
+  final DateTime startedAt;
 
   const HistoryItem({
     super.key,
     required this.date,
     required this.location,
-    required this.duration,
+    required this.endedAt,
+    required this.startedAt,
   });
 
   @override
@@ -217,6 +223,8 @@ class HistoryItem extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   date,
@@ -226,13 +234,32 @@ class HistoryItem extends StatelessWidget {
                     color: Colors.black,
                   ),
                 ),
-                Text(
-                  duration.toString(),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      startedAt.toString().substring(11, 16),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w300,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Icon(
+                      Icons.arrow_forward,
+                      size: 16,
+                      color: Colors.black,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      endedAt.toString().substring(11, 16),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w300,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

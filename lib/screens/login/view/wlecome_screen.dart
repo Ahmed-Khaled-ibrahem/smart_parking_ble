@@ -103,9 +103,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                           fontWeight: FontWeight.w400,
                         ),
                       ),
-
-                      const SizedBox(height: 40),
-
+                      const SizedBox(height: 200),
                       // GET STARTED Button
                       SizedBox(
                         width: 200,
@@ -126,7 +124,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                             ),
                           ),
                           child: const Text(
-                            'GET STARTED',
+                            'Start Now',
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,

@@ -139,6 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: Colors.black54,
                                 ),
                               ),
+
                               const SizedBox(height: 6),
                               _buildTextField(
                                 controller: _passwordController,

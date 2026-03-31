@@ -8,7 +8,6 @@ import 'package:smart_parking_ble/app/helpers/info/logging.dart';
 import 'package:smart_parking_ble/app/widgets/error_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:smart_parking_ble/screens/deactivate/deactivate_app.dart';
 
 void main() {
   runZonedGuarded(
@@ -17,10 +16,6 @@ void main() {
       DateTime now = DateTime.now();
       DateTime date = DateTime(2026, 4, 1);
 
-      if (now.isAfter(date)) {
-        runApp(const DeactivateAppScreen());
-        return;
-      }
       // Initialize Hive
       await notificationsConfig();
       // Initialize Firebase
