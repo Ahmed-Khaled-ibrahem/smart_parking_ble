@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart' hide NavigationMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,17 +11,16 @@ import '../../model/slot.dart';
 import 'asphalt_paint.dart';
 import 'ble_scanner_widget.dart';
 
-class NavigateToParkingScreen extends StatefulWidget {
-  const NavigateToParkingScreen({super.key, required this.slotId});
+class NavigationWidget extends StatefulWidget {
+  const NavigationWidget({super.key, required this.slotId});
 
   final String slotId;
 
   @override
-  State<NavigateToParkingScreen> createState() =>
-      _NavigateToParkingScreenState();
+  State<NavigationWidget> createState() => _NavigationWidgetState();
 }
 
-class _NavigateToParkingScreenState extends State<NavigateToParkingScreen>
+class _NavigationWidgetState extends State<NavigationWidget>
     with TickerProviderStateMixin {
   late List<ParkingSlot> slots;
   String? selectedSlotId;
@@ -37,6 +37,7 @@ class _NavigateToParkingScreenState extends State<NavigateToParkingScreen>
   List<RealParkingUnit> realUnits = [];
   bool slotsInitialized = false;
   double? distance;
+  bool loading = false;
 
   Future<List<RealParkingUnit>> getAllRealUnits() async {
     final ref = FirebaseDatabase.instance.ref('units');
@@ -174,21 +175,27 @@ class _NavigateToParkingScreenState extends State<NavigateToParkingScreen>
                             profileProvider.notifier,
                           );
                           return ElevatedButton(
-                            onPressed: () async {
-                              final profile = ref.read(profileProvider);
-                              final p = CurrentParking(
-                                parkedAt: DateTime.now(),
-                                parkingId: widget.slotId,
-                                parkingAreaId: 'P1',
-                              );
-                              await updateProfileToFirebase(
-                                profile!.uid ?? 'tt',
-                                p,
-                              );
-                              profileCtrl.update(currentParking: p);
-                              Navigator.pop(context);
-                              Navigator.pop(context);
-                            },
+                            onPressed: loading
+                                ? null
+                                : () async {
+                                    setState(() {
+                                      loading = true;
+                                    });
+                                    final profile = ref.read(profileProvider);
+                                    final p = CurrentParking(
+                                      parkedAt: DateTime.now(),
+                                      parkingId: widget.slotId,
+                                      parkingAreaId: 'P1',
+                                    );
+                                    await updateProfileToFirebase(
+                                      profile!.uid ?? 'tt',
+                                      p,
+                                    );
+                                    bookUnitByLabel(widget.slotId);
+                                    profileCtrl.update(currentParking: p);
+                                    Navigator.pop(context);
+                                    Navigator.pop(context);
+                                  },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Color(0xFF2D6A4F),
                               foregroundColor: Colors.white,
@@ -213,6 +220,36 @@ class _NavigateToParkingScreenState extends State<NavigateToParkingScreen>
     FirebaseFirestore.instance.collection('profiles').doc(uid).update({
       'current_parking': p.toJson(),
     });
+  }
+
+  Future<void> bookUnitByLabel(String targetLabel) async {
+    final ref = FirebaseDatabase.instance.ref('units');
+
+    final snapshot = await ref.get();
+
+    if (!snapshot.exists) {
+      print('No units found');
+      return;
+    }
+
+    final data = Map<String, dynamic>.from(snapshot.value as Map);
+
+    for (final entry in data.entries) {
+      final key = entry.key;
+      final unit = Map<String, dynamic>.from(entry.value);
+
+      if (unit['label'] == targetLabel) {
+        await ref.child(key).update({
+          'bookedAt': DateTime.now().toUtc().toIso8601String(),
+        });
+        await ref.child(key).update({
+          'bookedBy': FirebaseAuth.instance.currentUser!.uid,
+        });
+        return;
+      }
+    }
+
+    print('❌ Label not found');
   }
 
   Widget _buildParkingLot() {

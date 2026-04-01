@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import '../admin/real_parking_slot.dart';
@@ -31,6 +32,10 @@ class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
           label: unit['label'] ?? '',
           status: unit['status'] ?? '',
           linkedTo: unit['linkedTo'] ?? '',
+          bookedBy: unit['bookedBy'] ?? '',
+          bookedAt:
+              DateTime.tryParse(unit['bookedAt'] ?? '') ??
+              DateTime.now().subtract(const Duration(days: 1)),
         );
       }).toList();
     });
@@ -203,11 +208,20 @@ class _ParkingSpotRow extends StatelessWidget {
 
   bool get isFree => spot.status == 'free';
 
+  bool get isBooked =>
+      DateTime.now().toUtc().difference(spot.bookedAt).inMinutes <= 10;
+
+  bool get bookedByMe =>
+      spot.bookedBy == FirebaseAuth.instance.currentUser?.uid;
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
-        if (isFree) {
+        final bool canNavigate = isFree
+            ? (isBooked ? (bookedByMe ? (true) : (false)) : (true))
+            : (false);
+        if (canNavigate) {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -239,18 +253,34 @@ class _ParkingSpotRow extends StatelessWidget {
             ),
             const Spacer(),
             // Status
-            if (isFree) ...[
+            if (isBooked) ...[
+              const Text(
+                'RESERVED',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                  letterSpacing: 1,
+                ),
+              ),
+              if (bookedByMe)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.chevron_right, color: primaryGreen, size: 22),
+                  ],
+                ),
+            ] else if (isFree) ...[
               const Text(
                 'FREE',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Colors.green,
                   letterSpacing: 1,
                 ),
               ),
               const SizedBox(width: 4),
-              // Double chevron arrow
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
@@ -263,7 +293,7 @@ class _ParkingSpotRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black54,
+                  color: Colors.red,
                   letterSpacing: 1,
                 ),
               ),

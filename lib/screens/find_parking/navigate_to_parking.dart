@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'navigate_to_parking_screen.dart';
+import 'navigation_widget.dart';
 
 class ParkingNavigationScreen extends StatelessWidget {
   const ParkingNavigationScreen({super.key, required this.slotId});
@@ -54,7 +54,7 @@ class ParkingNavigationScreen extends StatelessWidget {
                 ],
               ),
             ),
-            Expanded(child: NavigateToParkingScreen(slotId: slotId)),
+            Expanded(child: NavigationWidget(slotId: slotId)),
           ],
         ),
       ),
