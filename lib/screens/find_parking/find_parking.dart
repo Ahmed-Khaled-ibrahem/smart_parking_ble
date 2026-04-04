@@ -4,6 +4,24 @@ import 'package:flutter/material.dart';
 import '../admin/real_parking_slot.dart';
 import 'navigate_to_parking.dart';
 
+enum SortType { entrance, exit, gate1, gate2 }
+
+extension SortTypeExtension on SortType {
+  String get displayName {
+    switch (this) {
+      case SortType.entrance:
+        return 'ENTRANCE';
+      case SortType.exit:
+        return 'EXIT';
+      case SortType.gate1:
+        return 'GATE 1';
+      case SortType.gate2:
+        return 'GATE 2';
+    }
+  }
+}
+
+
 class AvailableParkingScreen extends StatefulWidget {
   const AvailableParkingScreen({super.key});
 
@@ -14,6 +32,62 @@ class AvailableParkingScreen extends StatefulWidget {
 class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
   static const Color primaryGreen = Color(0xFF2D6A4F);
   static const Color lightGreen = Color(0xFFD8EAD3);
+
+  SortType _sortType = SortType.entrance;
+
+  Offset _getSlotPosition(String label) {
+    if (label.isEmpty) return const Offset(0, 0);
+    final block = label[0].toUpperCase();
+    final indexStr = label.substring(1);
+    final index = int.tryParse(indexStr) ?? 1;
+    final i = (index - 1).clamp(0, 9);
+    
+    int blockX = 0;
+    int blockY = 0;
+    switch (block) {
+      case 'A': blockX = 0; blockY = 0; break;
+      case 'B': blockX = 1; blockY = 0; break;
+      case 'C': blockX = 0; blockY = 1; break;
+      case 'D': blockX = 1; blockY = 1; break;
+      default: return const Offset(0, 0);
+    }
+    
+    final colInBlock = i ~/ 5;
+    final rowInBlock = i % 5;
+    
+    final globalCol = blockX * 2 + colInBlock;
+    final globalRow = blockY * 5 + rowInBlock;
+    
+    return Offset(globalCol.toDouble(), globalRow.toDouble());
+  }
+
+  double _getDistance(String label, SortType sortType) {
+    final pos = _getSlotPosition(label);
+    Offset target;
+    switch (sortType) {
+      case SortType.entrance:
+        target = const Offset(1.5, -1);
+        break;
+      case SortType.exit:
+        target = const Offset(1.5, 10);
+        break;
+      case SortType.gate1:
+        target = const Offset(4, 4.5);
+        break;
+      case SortType.gate2:
+        target = const Offset(-1, 4.5);
+        break;
+    }
+    return (pos - target).distance;
+  }
+
+  Stream<List<RealParkingUnit>>? _unitsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _unitsStream = streamUnits();
+  }
 
   Stream<List<RealParkingUnit>> streamUnits() {
     final ref = FirebaseDatabase.instance.ref('units');
@@ -90,7 +164,7 @@ class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
             ),
             // ── Body ─────────────────────────────────────────────
             StreamBuilder<List<RealParkingUnit>>(
-              stream: streamUnits(),
+              stream: _unitsStream,
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -102,7 +176,23 @@ class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
                   return const _NoSpotsView();
                 }
 
-                return Expanded(child: _SpotsAvailableView(spots: spots));
+                spots.sort((a, b) {
+                  final distA = _getDistance(a.label, _sortType);
+                  final distB = _getDistance(b.label, _sortType);
+                  return distA.compareTo(distB);
+                });
+
+                return Expanded(
+                  child: _SpotsAvailableView(
+                    spots: spots,
+                    sortType: _sortType,
+                    onSortChanged: (type) {
+                      setState(() {
+                        _sortType = type;
+                      });
+                    },
+                  ),
+                );
               },
             ),
           ],
@@ -117,8 +207,14 @@ class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
 // ─────────────────────────────────────────────────────────────
 class _SpotsAvailableView extends StatelessWidget {
   final List<RealParkingUnit> spots;
+  final SortType sortType;
+  final ValueChanged<SortType> onSortChanged;
 
-  const _SpotsAvailableView({required this.spots});
+  const _SpotsAvailableView({
+    required this.spots,
+    required this.sortType,
+    required this.onSortChanged,
+  });
 
   static const Color cardGreen = Color(0xFFDDEDD8);
   static const Color chipGreen = Color(0xFF52796F);
@@ -149,22 +245,41 @@ class _SpotsAvailableView extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
-                decoration: BoxDecoration(
-                  color: chipGreen,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  'SORTED BY: CLOSEST TO ENTRANCE',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.8,
+              PopupMenuButton<SortType>(
+                initialValue: sortType,
+                onSelected: onSortChanged,
+                itemBuilder: (context) {
+                  return SortType.values.map((type) {
+                    return PopupMenuItem<SortType>(
+                      value: type,
+                      child: Text('CLOSEST TO ${type.displayName}'),
+                    );
+                  }).toList();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: chipGreen,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'SORTED BY: CLOSEST TO ${sortType.displayName}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_drop_down, color: Colors.white, size: 16),
+                    ],
                   ),
                 ),
               ),
