@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../admin/real_parking_slot.dart';
 import 'navigate_to_parking.dart';
 
-enum SortType { entrance, exit, gate1, gate2 }
+enum SortType { entrance, exit, gate1, gate2, myLocation }
 
 extension SortTypeExtension on SortType {
   String get displayName {
@@ -17,6 +19,8 @@ extension SortTypeExtension on SortType {
         return 'GATE 1';
       case SortType.gate2:
         return 'GATE 2';
+      case SortType.myLocation:
+        return 'MY LOCATION';
     }
   }
 }
@@ -62,6 +66,7 @@ class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
   }
 
   double _getDistance(String label, SortType sortType) {
+    if (sortType == SortType.myLocation) return 0; // Handled separately
     final pos = _getSlotPosition(label);
     Offset target;
     switch (sortType) {
@@ -77,16 +82,70 @@ class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
       case SortType.gate2:
         target = const Offset(-1, 4.5);
         break;
+      default:
+        target = const Offset(1.5, -1);
     }
     return (pos - target).distance;
   }
 
   Stream<List<RealParkingUnit>>? _unitsStream;
+  Map<String, double> _rssiMap = {};
+  StreamSubscription<List<ScanResult>>? _scanSub;
+  bool _isScanning = false;
+
+  void _startBleScanning() async {
+    if (_isScanning) return;
+    try {
+      await FlutterBluePlus.adapterState.first;
+      if (FlutterBluePlus.adapterStateNow != BluetoothAdapterState.on) return;
+      setState(() => _isScanning = true);
+      await FlutterBluePlus.startScan(
+        timeout: null,
+        continuousUpdates: true,
+        androidUsesFineLocation: true,
+      );
+      _scanSub = FlutterBluePlus.scanResults.listen((results) {
+        final now = DateTime.now();
+        bool changed = false;
+        
+        for (final r in results) {
+          if (now.difference(r.timeStamp).inSeconds > 4) continue;
+          
+          final deviceName = r.device.platformName.isNotEmpty ? r.device.platformName : r.advertisementData.advName;
+          if (deviceName.isEmpty) continue;
+
+          final rssi = r.rssi.toDouble();
+          
+          if (_rssiMap[deviceName] != rssi) {
+             _rssiMap[deviceName] = rssi;
+             changed = true;
+          }
+        }
+        
+        if (changed && mounted && _sortType == SortType.myLocation) {
+          setState(() {}); 
+        }
+      });
+    } catch (_) {}
+  }
+
+  void _stopBleScanning() {
+    _scanSub?.cancel();
+    _scanSub = null;
+    FlutterBluePlus.stopScan();
+    _isScanning = false;
+  }
 
   @override
   void initState() {
     super.initState();
     _unitsStream = streamUnits();
+  }
+
+  @override
+  void dispose() {
+    _stopBleScanning();
+    super.dispose();
   }
 
   Stream<List<RealParkingUnit>> streamUnits() {
@@ -177,9 +236,16 @@ class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
                 }
 
                 spots.sort((a, b) {
-                  final distA = _getDistance(a.label, _sortType);
-                  final distB = _getDistance(b.label, _sortType);
-                  return distA.compareTo(distB);
+                  if (_sortType == SortType.myLocation) {
+                    final rssiA = _rssiMap[a.mac] ?? -999.0;
+                    final rssiB = _rssiMap[b.mac] ?? -999.0;
+                    // Larger RSSI means closer
+                    return rssiB.compareTo(rssiA);
+                  } else {
+                    final distA = _getDistance(a.label, _sortType);
+                    final distB = _getDistance(b.label, _sortType);
+                    return distA.compareTo(distB);
+                  }
                 });
 
                 return Expanded(
@@ -190,6 +256,11 @@ class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
                       setState(() {
                         _sortType = type;
                       });
+                      if (type == SortType.myLocation) {
+                        _startBleScanning();
+                      } else {
+                        _stopBleScanning();
+                      }
                     },
                   ),
                 );
