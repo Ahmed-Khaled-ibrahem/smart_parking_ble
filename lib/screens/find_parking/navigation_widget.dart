@@ -386,6 +386,25 @@ class _NavigationWidgetState extends State<NavigationWidget>
           right: 0,
           child: Center(child: _gateLabel('EXIT  ▼', const Color(0xFFFF5252))),
         ),
+        // GATE 1 — Middle Right
+        Positioned(
+          top: h / 2 - 45,
+          right: -0, // Adjust slightly if needed to prevent squishing
+          child: RotatedBox(
+            quarterTurns: 1,
+            child: _gateLabel('GATE 1', const Color(0xFF0492AE)),
+          ),
+
+        ),
+        // GATE 2 — Middle Left
+        Positioned(
+          top: h / 2 - 45,
+          left: 0,
+          child: RotatedBox(
+            quarterTurns: 3,
+            child: _gateLabel('GATE 2', const Color(0xFF0492AE)),
+          ),
+        ),
       ],
     );
   }

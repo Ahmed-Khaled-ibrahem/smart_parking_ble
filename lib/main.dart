@@ -21,6 +21,7 @@ void main() {
       // Initialize Firebase
       await firebaseConfig();
       // Initialize Easy Localization
+
       await EasyLocalization.ensureInitialized();
       // setting orientation
       await SystemChrome.setPreferredOrientations([
