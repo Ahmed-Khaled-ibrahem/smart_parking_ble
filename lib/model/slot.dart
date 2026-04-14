@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-enum ParkingStatus { available, occupied }
+enum ParkingStatus { available, occupied , booked }
 
 enum ParkingType { normal, disablePerson }
 

@@ -87,6 +87,14 @@ class _NavigationWidgetState extends State<NavigationWidget>
 
   Future _initSlots() async {
     realUnits = await getAllRealUnits();
+    final busyUnits = realUnits.where((e) => e.status == "busy").toList();
+
+    final bookedUnits = realUnits
+        .where(
+          (e) => e.bookedAt.difference(DateTime.now()).abs().inMinutes < 10,
+        )
+        .toList();
+
     slots = [];
     selectedSlotId = widget.slotId;
     final blockLabels = ['A', 'B', 'C', 'D'];
@@ -104,7 +112,11 @@ class _NavigationWidgetState extends State<NavigationWidget>
         slots.add(
           ParkingSlot(
             id: id,
-            status: ParkingStatus.available,
+            status: busyUnits.any((e) => e.label == id)
+                ? ParkingStatus.occupied
+                : bookedUnits.any((e) => e.label == id)
+                    ? ParkingStatus.booked
+                    : ParkingStatus.available,
             gridPosition: Offset(globalCol.toDouble(), globalRow.toDouble()),
             type: (i == 4) ? ParkingType.disablePerson : ParkingType.normal,
           ),
@@ -394,7 +406,6 @@ class _NavigationWidgetState extends State<NavigationWidget>
             quarterTurns: 1,
             child: _gateLabel('GATE 1', const Color(0xFF0492AE)),
           ),
-
         ),
         // GATE 2 — Middle Left
         Positioned(

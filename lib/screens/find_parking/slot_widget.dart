@@ -18,7 +18,8 @@ class NavigateParkingSlotWidget extends StatefulWidget {
   });
 
   @override
-  State<NavigateParkingSlotWidget> createState() => _NavigateParkingSlotWidgetState();
+  State<NavigateParkingSlotWidget> createState() =>
+      _NavigateParkingSlotWidgetState();
 }
 
 class _NavigateParkingSlotWidgetState extends State<NavigateParkingSlotWidget>
@@ -59,6 +60,7 @@ class _NavigateParkingSlotWidgetState extends State<NavigateParkingSlotWidget>
     final glowColor = isOccupied
         ? const Color(0xFFFF5252)
         : const Color(0xFF00E676);
+    final isBooked = widget.slot.status == ParkingStatus.booked;
     final selectedColor = const Color(0xFF00E5FF);
 
     return GestureDetector(
@@ -76,7 +78,7 @@ class _NavigateParkingSlotWidgetState extends State<NavigateParkingSlotWidget>
               duration: const Duration(milliseconds: 350),
               curve: Curves.easeInOut,
               decoration: BoxDecoration(
-                color: baseColor,
+                color: isBooked ? const Color(0xFF837A0A) : baseColor,
                 borderRadius: BorderRadius.circular(0),
                 border: Border.all(
                   color: widget.isSelected ? selectedColor : glowColor,
@@ -87,8 +89,8 @@ class _NavigateParkingSlotWidgetState extends State<NavigateParkingSlotWidget>
                     color: widget.isSelected
                         ? selectedColor.withOpacity(0.5)
                         : glowColor.withOpacity(
-                      isOccupied ? 0.2 : pulse * 0.35,
-                    ),
+                            isOccupied ? 0.2 : pulse * 0.35,
+                          ),
                     blurRadius: widget.isSelected ? 14 : 8,
                     spreadRadius: widget.isSelected ? 2 : 0,
                   ),
