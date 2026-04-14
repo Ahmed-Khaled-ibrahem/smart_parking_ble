@@ -59,6 +59,7 @@ class _ParkingSlotWidgetState extends State<ParkingSlotWidget>
     final glowColor = isOccupied
         ? const Color(0xFFFF5252)
         : const Color(0xFF00E676);
+    final isBooked = widget.slot.status == ParkingStatus.booked;
     final selectedColor = const Color(0xFF00E5FF);
 
     return GestureDetector(
@@ -76,7 +77,7 @@ class _ParkingSlotWidgetState extends State<ParkingSlotWidget>
               duration: const Duration(milliseconds: 350),
               curve: Curves.easeInOut,
               decoration: BoxDecoration(
-                color: baseColor,
+                color: isBooked ? const Color(0xFF837A0A) : baseColor,
                 borderRadius: BorderRadius.circular(0),
                 border: Border.all(
                   color: widget.isSelected ? selectedColor : glowColor,

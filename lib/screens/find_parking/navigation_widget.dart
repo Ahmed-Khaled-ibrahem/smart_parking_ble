@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
@@ -115,8 +117,8 @@ class _NavigationWidgetState extends State<NavigationWidget>
             status: busyUnits.any((e) => e.label == id)
                 ? ParkingStatus.occupied
                 : bookedUnits.any((e) => e.label == id)
-                    ? ParkingStatus.booked
-                    : ParkingStatus.available,
+                ? ParkingStatus.booked
+                : ParkingStatus.available,
             gridPosition: Offset(globalCol.toDouble(), globalRow.toDouble()),
             type: (i == 4) ? ParkingType.disablePerson : ParkingType.normal,
           ),
@@ -186,6 +188,34 @@ class _NavigationWidgetState extends State<NavigationWidget>
                           final profileCtrl = ref.watch(
                             profileProvider.notifier,
                           );
+                          // showing the timer
+                          if (realUnits.any(
+                            (e) =>
+                                e.bookedBy ==
+                                    FirebaseAuth.instance.currentUser!.uid &&
+                                e.bookedAt
+                                        .difference(DateTime.now())
+                                        .abs()
+                                        .inMinutes <
+                                    10,
+                          )) {
+                            final theTargetUnit = realUnits
+                                .where(
+                                  (e) =>
+                                      e.bookedBy ==
+                                      FirebaseAuth.instance.currentUser!.uid,
+                                )
+                                .first;
+
+                            return CountdownTimerWidget(
+                              bookedAt: theTargetUnit.bookedAt,
+                              onEndCallback: () {
+                                setState(() {
+                                  loading = false;
+                                });
+                              },
+                            );
+                          }
                           return ElevatedButton(
                             onPressed: loading
                                 ? null
@@ -207,6 +237,14 @@ class _NavigationWidgetState extends State<NavigationWidget>
                                     profileCtrl.update(currentParking: p);
                                     Navigator.pop(context);
                                     Navigator.pop(context);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        backgroundColor: Colors.green,
+                                        content: Text(
+                                          'Parking saved successfully',
+                                        ),
+                                      ),
+                                    );
                                   },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Color(0xFF2D6A4F),
@@ -444,6 +482,69 @@ class _NavigationWidgetState extends State<NavigationWidget>
           letterSpacing: 2,
         ),
       ),
+    );
+  }
+}
+
+class CountdownTimerWidget extends StatefulWidget {
+  final DateTime bookedAt;
+  final VoidCallback onEndCallback;
+
+  const CountdownTimerWidget({
+    super.key,
+    required this.bookedAt,
+    required this.onEndCallback,
+  });
+
+  @override
+  State<CountdownTimerWidget> createState() => _CountdownTimerWidgetState();
+}
+
+class _CountdownTimerWidgetState extends State<CountdownTimerWidget> {
+  Timer? _timer;
+  Duration remainingTime = Duration.zero;
+
+  @override
+  void initState() {
+    super.initState();
+    startTimer();
+  }
+
+  void startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final elapsed = DateTime.now().difference(widget.bookedAt);
+
+      final remaining = const Duration(minutes: 10) - elapsed;
+
+      setState(() {
+        remainingTime = remaining.isNegative ? Duration.zero : remaining;
+      });
+
+      if (remainingTime == Duration.zero) {
+        widget.onEndCallback();
+        _timer?.cancel();
+      }
+    });
+  }
+
+  String formatTime(Duration d) {
+    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return "$minutes:$seconds";
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      'Remaining time: ${formatTime(remainingTime)}',
+      textAlign: TextAlign.center,
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
     );
   }
 }
