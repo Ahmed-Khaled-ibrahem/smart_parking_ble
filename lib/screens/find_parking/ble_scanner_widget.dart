@@ -165,6 +165,7 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
     if (match.isEmpty) return;
     _lastSeen = now;
     final rssi = match.first.rssi.toDouble();
+    print(rssi);
     _addRssiReading(rssi);
   }
 

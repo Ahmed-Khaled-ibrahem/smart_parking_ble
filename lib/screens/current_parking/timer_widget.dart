@@ -150,10 +150,12 @@ class _SessionTimerWidgetState extends State<SessionTimerWidget> {
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.requestExactAlarmsPermission();
+
   }
 
   void _startTimer() async {
     await requestExactAlarmPermission();
+
     await flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
