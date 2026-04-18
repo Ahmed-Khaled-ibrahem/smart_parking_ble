@@ -39,6 +39,7 @@ double _rssiToDistance(double avgRssi) {
   if (ratio < 1.0) {
     return pow(ratio, 10).toDouble();
   }
+  print(avgRssi);
   return pow(
     10,
     (avgRssi - _BleConfig.txPower) / (-10 * _BleConfig.pathLossExponent),
