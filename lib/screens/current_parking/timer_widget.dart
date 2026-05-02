@@ -4,9 +4,21 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../app/config/notifications_config.dart';
 
-const Color lightGreenBg = Color(0xFFE8F5E9);
-const Color primaryGreen = Color(0xFF2D5A47);
-const Color darkGreenBtn = Color(0xFF1E4D3B);
+// — Color palette (matching home screen) —
+const Color g1 = Color(0xFF1B4332);
+const Color g2 = Color(0xFF2D6A4F);
+const Color g3 = Color(0xFF40916C);
+const Color g5 = Color(0xFF74C69D);
+const Color g6 = Color(0xFFB7E4C7);
+const Color cardGreen = Color(0xFFDDEDD8);
+const Color lightGreen = Color(0xFFD8EAD3);
+const Color darkText = Color(0xFF0A1F14);
+const Color mutedText = Color(0xFF5a7a65);
+
+// Legacy aliases for backwards compatibility
+const Color lightGreenBg = cardGreen;
+const Color primaryGreen = g2;
+const Color darkGreenBtn = g1;
 
 class SessionTimerWidget extends StatefulWidget {
   const SessionTimerWidget({super.key});
@@ -286,84 +298,139 @@ class _SessionTimerWidgetState extends State<SessionTimerWidget> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Timer Card ──────────────────────────────────────────
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-
             decoration: BoxDecoration(
-              color: lightGreenBg,
-              borderRadius: BorderRadius.circular(20),
+              color: cardGreen,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: g3.withOpacity(0.1),
+                width: 1,
+              ),
             ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: Stack(
+                children: [
+                  // Decorative circle
+                  Positioned(
+                    right: -20,
+                    bottom: -25,
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: g2.withOpacity(0.05),
+                      ),
+                    ),
+                  ),
 
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'TIMER',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
-                        color: Color(0xFF1A4D33),
-                      ),
-                    ),
-                    if (_started)
-                      Row(
-                        children: [
-                          Container(
-                            width: 7,
-                            height: 7,
-                            decoration: BoxDecoration(
-                              color: _running ? primaryGreen : Colors.grey,
-                              shape: BoxShape.circle,
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'REMINDER TIMER',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1,
+                                color: mutedText,
+                              ),
+                            ),
+                            if (_started)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _running
+                                      ? g5.withOpacity(0.2)
+                                      : Colors.grey.withOpacity(0.15),
+                                  border: Border.all(
+                                    color: _running
+                                        ? g5.withOpacity(0.3)
+                                        : Colors.grey.withOpacity(0.25),
+                                    width: 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 5,
+                                      height: 5,
+                                      decoration: BoxDecoration(
+                                        color: _running ? g5 : Colors.grey,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      _running ? 'RUNNING' : 'PAUSED',
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1.2,
+                                        color: _running ? g3 : Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.timer_outlined,
+                              size: 28,
+                              color: g2.withOpacity(0.8),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              _formatTime(_remainingSecs),
+                              style: const TextStyle(
+                                fontSize: 36,
+                                fontWeight: FontWeight.w800,
+                                color: darkText,
+                                fontFeatures: [FontFeature.tabularFigures()],
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Progress bar
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: LinearProgressIndicator(
+                            value: _progress,
+                            minHeight: 5,
+                            backgroundColor: g6.withOpacity(0.5),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              _running ? g2 : g3.withOpacity(0.5),
                             ),
                           ),
-                          const SizedBox(width: 5),
-                          Text(
-                            _running ? 'RUNNING' : 'PAUSED',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: .8,
-                              color: _running ? darkGreenBtn : Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _formatTime(_remainingSecs),
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A4D33),
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                // Progress bar
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: LinearProgressIndicator(
-                    value: _progress,
-                    minHeight: 5,
-                    backgroundColor: const Color(0xFFB8DEC8),
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      primaryGreen,
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
 
@@ -381,11 +448,15 @@ class _SessionTimerWidgetState extends State<SessionTimerWidget> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 12,
+                        vertical: 14,
                       ),
                       decoration: BoxDecoration(
-                        color: lightGreenBg,
-                        borderRadius: BorderRadius.circular(20),
+                        color: lightGreen,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: g3.withOpacity(0.1),
+                          width: 1,
+                        ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -396,26 +467,26 @@ class _SessionTimerWidgetState extends State<SessionTimerWidget> {
                               const Text(
                                 'REMIND ME AFTER',
                                 style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: .8,
-                                  color: Color(0xFF1A4D33),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 1,
+                                  color: mutedText,
                                 ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 _remindLabel,
                                 style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: darkGreenBtn,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: darkText,
                                 ),
                               ),
                             ],
                           ),
-                          const Icon(
+                          Icon(
                             Icons.arrow_drop_down,
-                            color: primaryGreen,
+                            color: g2,
                           ),
                         ],
                       ),
@@ -440,12 +511,22 @@ class _SessionTimerWidgetState extends State<SessionTimerWidget> {
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    height: 50,
                     decoration: BoxDecoration(
-                      color: _running ? Colors.white : darkGreenBtn,
-                      borderRadius: BorderRadius.circular(20),
+                      gradient: _running
+                          ? null
+                          : const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [g1, g2],
+                            ),
+                      color: _running ? cardGreen : null,
+                      borderRadius: BorderRadius.circular(22),
                       border: _running
-                          ? Border.all(color: const Color(0xFFA8D9BC))
+                          ? Border.all(
+                              color: g3.withOpacity(0.2),
+                              width: 1,
+                            )
                           : null,
                     ),
                     child: Center(
@@ -456,12 +537,10 @@ class _SessionTimerWidgetState extends State<SessionTimerWidget> {
                             ? 'PAUSE'
                             : 'RESUME',
                         style: TextStyle(
-                          color: _running
-                              ? const Color(0xFF1A4D33)
-                              : Colors.white,
-                          fontWeight: FontWeight.bold,
+                          color: _running ? g2 : Colors.white,
+                          fontWeight: FontWeight.w800,
                           fontSize: 12,
-                          letterSpacing: .8,
+                          letterSpacing: 1.2,
                         ),
                       ),
                     ),
@@ -478,21 +557,34 @@ class _SessionTimerWidgetState extends State<SessionTimerWidget> {
               onTap: _stopTimer,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFDEDED),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Center(
-                  child: Text(
-                    'STOP TIMER',
-                    style: TextStyle(
-                      color: Color(0xFFC0392B),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      letterSpacing: .8,
-                    ),
+                  color: const Color(0xFFDC3232).withOpacity(0.06),
+                  border: Border.all(
+                    color: const Color(0xFFDC3232).withOpacity(0.18),
+                    width: 1.5,
                   ),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.stop_rounded,
+                      size: 16,
+                      color: Color(0xFFc0392b),
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'STOP TIMER',
+                      style: TextStyle(
+                        color: Color(0xFFc0392b),
+                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

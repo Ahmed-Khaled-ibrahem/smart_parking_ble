@@ -20,7 +20,7 @@ class BleProximityWidget extends StatefulWidget {
 // ─── Configuration ──────────────────────────
 class _BleConfig {
   // Adjust txPower to match your actual BLE beacon/device (common values: -59, -65, -70)
-  static const double txPower = -65;
+  static const double txPower = -40;
 
   // Path-loss exponent (2.0 = free space, 2.7–4.0 = indoor obstacles)
   static const double pathLossExponent = 2.5;

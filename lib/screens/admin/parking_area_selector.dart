@@ -177,6 +177,16 @@ class _ParkingScreenAdminState extends State<ParkingScreenAdmin>
     super.dispose();
   }
 
+  // — Color palette —
+  static const Color g1 = Color(0xFF1B4332);
+  static const Color g2 = Color(0xFF2D6A4F);
+  static const Color g3 = Color(0xFF40916C);
+  static const Color g5 = Color(0xFF74C69D);
+  static const Color cardGreen = Color(0xFFDDEDD8);
+  static const Color lightGreen = Color(0xFFD8EAD3);
+  static const Color darkText = Color(0xFF0A1F14);
+  static const Color mutedText = Color(0xFF5a7a65);
+
   Future<String?> showUnitPickerDialog(
     BuildContext context,
     List<RealParkingUnit> units,
@@ -185,48 +195,144 @@ class _ParkingScreenAdminState extends State<ParkingScreenAdmin>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Select Parking Unit"),
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          title: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [g2, g3],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.local_parking_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  "Select Parking Unit",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: darkText,
+                  ),
+                ),
+              ),
+            ],
+          ),
           content: SizedBox(
             width: double.maxFinite,
             height: 300,
             child: Builder(
               builder: (context) {
                 if (units.isEmpty) {
-                  return const Center(child: Text("No units available"));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: lightGreen,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.bluetooth_disabled_rounded,
+                            size: 28,
+                            color: g2.withOpacity(0.5),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          "No units available",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: mutedText,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
                 }
-                return ListView.builder(
+                return ListView.separated(
+                  padding: const EdgeInsets.only(top: 8, bottom: 8),
                   itemCount: units.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
                     final unit = units[index];
 
-                    return ListTile(
-                      leading: const Icon(Icons.local_parking),
-                      title: Text(unit.label),
-                      subtitle: Text(unit.mac),
-                      trailing: Text(
-                        unit.status,
-                        style: TextStyle(
-                          color: unit.status == "free"
-                              ? Colors.green
-                              : Colors.red,
-                        ),
-                      ),
+                    return GestureDetector(
                       onTap: () async {
                         final confirmed = await showDialog<bool>(
                           context: context,
                           builder: (context) {
                             return AlertDialog(
-                              title: const Text("Confirm"),
-                              content: Text("Use parking unit ${unit.label}?"),
+                              backgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(22),
+                              ),
+                              title: const Text(
+                                "Confirm",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: darkText,
+                                ),
+                              ),
+                              content: Text(
+                                "Link slot to parking unit ${unit.label}?",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: mutedText.withOpacity(0.9),
+                                ),
+                              ),
                               actions: [
                                 TextButton(
                                   onPressed: () =>
                                       Navigator.pop(context, false),
-                                  child: const Text("Cancel"),
+                                  child: Text(
+                                    "Cancel",
+                                    style: TextStyle(
+                                      color: mutedText,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                                 ),
                                 ElevatedButton(
                                   onPressed: () => Navigator.pop(context, true),
-                                  child: const Text("Confirm"),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: g2,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 10,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    "Confirm",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ),
                               ],
                             );
@@ -237,6 +343,92 @@ class _ParkingScreenAdminState extends State<ParkingScreenAdmin>
                           Navigator.pop(context, unit.mac);
                         }
                       },
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: unit.status == "free"
+                              ? cardGreen
+                              : Colors.grey.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: unit.status == "free"
+                                ? g3.withOpacity(0.2)
+                                : Colors.grey.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: unit.status == "free"
+                                      ? [g2, g3]
+                                      : [Colors.grey, Colors.grey.shade600],
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(
+                                Icons.bluetooth_rounded,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    unit.label,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: darkText,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    unit.mac,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
+                                      color: mutedText.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: unit.status == "free"
+                                    ? const Color(0xFF40C074).withOpacity(0.15)
+                                    : Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                unit.status.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.5,
+                                  color: unit.status == "free"
+                                      ? const Color(0xFF40C074)
+                                      : Colors.red,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   },
                 );
@@ -244,9 +436,26 @@ class _ParkingScreenAdminState extends State<ParkingScreenAdmin>
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, null),
-              child: const Text("Close"),
+            GestureDetector(
+              onTap: () => Navigator.pop(context, null),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  "Close",
+                  style: TextStyle(
+                    color: mutedText,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
             ),
           ],
         );
@@ -259,23 +468,93 @@ class _ParkingScreenAdminState extends State<ParkingScreenAdmin>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Confirmation"),
-          content: SizedBox(
-            width: double.maxFinite,
-            height: 200,
-            child: Center(
-              child: Center(
-                child: Text(
-                  'Do you want to delete this unit?',
-                  textAlign: TextAlign.center,
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          actionsPadding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+          title: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFDC3232).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Color(0xFFc0392b),
+                  size: 24,
                 ),
               ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  "Unlink Unit",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: darkText,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to unlink this parking unit from the slot?',
+            style: TextStyle(
+              fontSize: 14,
+              color: mutedText.withOpacity(0.9),
+              height: 1.5,
             ),
           ),
           actions: [
-            TextButton(
+            GestureDetector(
+              onTap: () => Navigator.pop(context, false),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  "Cancel",
+                  style: TextStyle(
+                    color: mutedText,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            ElevatedButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text("Yes"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFc0392b),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                "Unlink",
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ],
         );

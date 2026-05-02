@@ -58,7 +58,6 @@ flutter:
     - assets/translations/
     - assets/icons/
     - assets/lottie/
-    - assets/lottie/onboarding/
     - assets/images/
     - assets/images/logo/
     - assets/sounds/
