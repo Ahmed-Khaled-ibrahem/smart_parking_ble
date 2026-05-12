@@ -19,29 +19,35 @@ class BleProximityWidget extends StatefulWidget {
 
 // ─── Configuration ──────────────────────────
 class _BleConfig {
-  // Adjust txPower to match your actual BLE beacon/device (common values: -59, -65, -70)
-  static const double txPower = -40;
+  // Standard BLE beacon measured power at 1 meter. Common values:
+  // -59 (iBeacon default), -65 (many Android), -70 (weaker hardware)
+  static const double txPower = -59;
 
-  // Path-loss exponent (2.0 = free space, 2.7–4.0 = indoor obstacles)
-  static const double pathLossExponent = 2.5;
+  // Path-loss exponent (2.0 = free space, 2.7–3.5 = indoor)
+  static const double pathLossExponent = 2.7;
 
-  // Number of RSSI readings to average (higher = smoother but slower)
-  static const int averagingWindowSize = 8;
+  // Raw RSSI readings kept for median+mean filtering
+  static const int rssiWindowSize = 15;
 
-  // BLE scan interval in milliseconds
-  static const int scanIntervalMs = 2500;
+  // Exponential smoothing factor (0.1 = very smooth/slow, 0.4 = moderate)
+  static const double smoothingAlpha = 0.2;
+
+  // Only accept a new displayed distance if it changed by more than this (meters)
+  static const double hysteresisThreshold = 0.4;
+
+  // How often the UI refreshes (milliseconds)
+  static const int uiRefreshMs = 2000;
+
+  // Seconds without a packet before device is considered gone
+  static const int expirySeconds = 5;
 }
 
 // ─── Distance calculator ─────────────────────
-double _rssiToDistance(double avgRssi) {
-  if (avgRssi == 0) return -1;
-  final ratio = avgRssi / _BleConfig.txPower;
-  if (ratio < 1.0) {
-    return pow(ratio, 10).toDouble();
-  }
+double _rssiToDistance(double rssi) {
+  // Standard log-distance path loss model
   return pow(
-    10,
-    (avgRssi - _BleConfig.txPower) / (-10 * _BleConfig.pathLossExponent),
+    10.0,
+    (rssi - _BleConfig.txPower) / (-10.0 * _BleConfig.pathLossExponent),
   ).toDouble();
 }
 
@@ -49,15 +55,24 @@ double _rssiToDistance(double avgRssi) {
 class _BleProximityWidgetState extends State<BleProximityWidget>
     with SingleTickerProviderStateMixin {
   StreamSubscription<List<ScanResult>>? _scanSub;
-  final List<double> _rssiWindow = [];
-  final List<double> _reportDistanceBuffer = [];
-  Timer? _expiryTimer;
-  Timer? _reportTimer;
-  DateTime? _lastSeen;
 
-  double? _smoothedRssi;
-  double? _distance;
+  // Raw RSSI circular buffer
+  final List<double> _rssiWindow = [];
+
+  // Exponentially smoothed RSSI (updated on every packet)
+  double? _emaRssi;
+
+  // Last distance committed to the UI (for hysteresis check)
+  double? _lastCommittedDistance;
+
+  // Values shown on screen — only changed by _uiTimer
+  double? _displayDistance;
+  double? _displayRssi;
   bool _deviceFound = false;
+
+  Timer? _expiryTimer;
+  Timer? _uiTimer;
+  DateTime? _lastSeen;
   bool _isScanning = false;
 
   late AnimationController _pulseController;
@@ -75,48 +90,73 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
     );
     _startScanning();
     _startExpiryTimer();
-    _startReporting();
+    _startUiTimer();
   }
+
+  // ─── Timers ────────────────────────────────
 
   void _startExpiryTimer() {
     _expiryTimer?.cancel();
-    _expiryTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
+    _expiryTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
       if (_lastSeen != null &&
-          DateTime.now().difference(_lastSeen!).inSeconds > 4) {
-        if (_deviceFound) {
-          setState(() {
-            _deviceFound = false;
-            _smoothedRssi = null;
-            _distance = null;
-            _rssiWindow.clear();
-            _lastSeen = null;
-          });
-        }
+          DateTime.now().difference(_lastSeen!).inSeconds >
+              _BleConfig.expirySeconds) {
+        _emaRssi = null;
+        _rssiWindow.clear();
+        _lastSeen = null;
+        _lastCommittedDistance = null;
       }
     });
   }
 
-  void _startReporting() {
-    _reportTimer?.cancel();
-    _reportTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+  /// The ONLY place that calls setState and updates the display.
+  /// Runs every [_BleConfig.uiRefreshMs] ms — completely decoupled from scan callbacks.
+  void _startUiTimer() {
+    _uiTimer?.cancel();
+    _uiTimer = Timer.periodic(Duration(milliseconds: _BleConfig.uiRefreshMs), (
+      _,
+    ) {
       if (!mounted) return;
-      if (_deviceFound) {
-        if (_reportDistanceBuffer.isNotEmpty) {
-          final avg =
-              _reportDistanceBuffer.reduce((a, b) => a + b) /
-              _reportDistanceBuffer.length;
-          widget.onDistanceUpdate(avg);
-          _reportDistanceBuffer.clear();
-        } else if (_distance != null) {
-          widget.onDistanceUpdate(_distance);
+
+      final isOnline =
+          _lastSeen != null &&
+          DateTime.now().difference(_lastSeen!).inSeconds <=
+              _BleConfig.expirySeconds;
+
+      if (!isOnline) {
+        if (_deviceFound) {
+          setState(() {
+            _deviceFound = false;
+            _displayDistance = null;
+            _displayRssi = null;
+          });
+          widget.onDistanceUpdate(null);
         }
-      } else {
-        widget.onDistanceUpdate(null);
+        return;
       }
+
+      // Compute filtered distance from current EMA RSSI
+      if (_emaRssi == null) return;
+      final newDist = _rssiToDistance(_emaRssi!);
+
+      // Hysteresis: skip update if distance hasn't changed enough
+      final shouldUpdate =
+          _lastCommittedDistance == null ||
+          (newDist - _lastCommittedDistance!).abs() >=
+              _BleConfig.hysteresisThreshold;
+
+      if (shouldUpdate) {
+        _lastCommittedDistance = newDist;
+      }
+
+      setState(() {
+        _deviceFound = true;
+        _displayDistance = _lastCommittedDistance;
+        _displayRssi = _emaRssi;
+      });
+
+      widget.onDistanceUpdate(_lastCommittedDistance);
     });
   }
 
@@ -124,17 +164,18 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
   void dispose() {
     _pulseController.dispose();
     _expiryTimer?.cancel();
-    _reportTimer?.cancel();
+    _uiTimer?.cancel();
     _stopScanning();
     super.dispose();
   }
 
   // ─── BLE Scanning ──────────────────────────
+
   void _startScanning() async {
     if (_isScanning) return;
     await FlutterBluePlus.adapterState.first;
     if (FlutterBluePlus.adapterStateNow != BluetoothAdapterState.on) return;
-    if (mounted) setState(() => _isScanning = true);
+    _isScanning = true;
     try {
       await FlutterBluePlus.startScan(
         timeout: null,
@@ -142,7 +183,6 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
         androidUsesFineLocation: true,
       );
     } catch (_) {}
-
     _scanSub = FlutterBluePlus.scanResults.listen(_onScanResults);
   }
 
@@ -154,66 +194,83 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
   }
 
   void _onScanResults(List<ScanResult> results) {
+    // ── NO setState here — only update internal buffers ──
     final now = DateTime.now();
     final match = results.where(
       (r) =>
           (r.device.platformName == widget.targetDeviceName ||
               r.advertisementData.advName == widget.targetDeviceName) &&
-          now.difference(r.timeStamp).inSeconds < 4,
+          now.difference(r.timeStamp).inSeconds < _BleConfig.expirySeconds,
     );
     if (match.isEmpty) return;
+
     _lastSeen = now;
     final rssi = match.first.rssi.toDouble();
-    _addRssiReading(rssi);
+    _processRssi(rssi);
   }
 
-  void _addRssiReading(double rssi) {
-    _rssiWindow.add(rssi);
-    if (_rssiWindow.length > _BleConfig.averagingWindowSize) {
+  /// Multi-stage RSSI pipeline (no UI side effects):
+  /// 1. Add raw reading to circular window
+  /// 2. Compute trimmed mean of window (discard top/bottom outlier)
+  /// 3. Feed trimmed mean into exponential moving average
+  void _processRssi(double rawRssi) {
+    // Stage 1 — circular buffer
+    _rssiWindow.add(rawRssi);
+    if (_rssiWindow.length > _BleConfig.rssiWindowSize) {
       _rssiWindow.removeAt(0);
     }
-    final avg = _rssiWindow.reduce((a, b) => a + b) / _rssiWindow.length;
-    final dist = _rssiToDistance(avg);
 
-    if (mounted) {
-      setState(() {
-        _deviceFound = true;
-        _smoothedRssi = avg;
-        _distance = dist;
-      });
+    // Stage 2 — trimmed mean (drop 1 highest and 1 lowest if window >= 5)
+    double trimmedMean;
+    if (_rssiWindow.length >= 5) {
+      final sorted = List<double>.from(_rssiWindow)..sort();
+      final trimmed = sorted.sublist(1, sorted.length - 1);
+      trimmedMean = trimmed.reduce((a, b) => a + b) / trimmed.length;
+    } else {
+      trimmedMean = _rssiWindow.reduce((a, b) => a + b) / _rssiWindow.length;
     }
-    _reportDistanceBuffer.add(dist);
+
+    // Stage 3 — exponential moving average
+    if (_emaRssi == null) {
+      _emaRssi = trimmedMean; // cold start
+    } else {
+      _emaRssi =
+          _BleConfig.smoothingAlpha * trimmedMean +
+          (1.0 - _BleConfig.smoothingAlpha) * _emaRssi!;
+    }
   }
 
   // ─── UI Helpers ────────────────────────────
+
   String get _distanceLabel {
-    if (_distance == null) return '—';
-    if (_distance! < 1) return '< 1 m';
-    return '${_distance!.toStringAsFixed(1)} m';
+    if (_displayDistance == null) return '—';
+    if (_displayDistance! < 1) return '< 1 m';
+    return '${_displayDistance!.toStringAsFixed(1)} m';
   }
 
   String get _proximityLabel {
-    if (_distance == null) return 'Out of Range';
-    if (_distance! < 2) return 'Very Close';
-    if (_distance! < 5) return 'Near';
-    if (_distance! < 10) return 'Nearby';
+    if (_displayDistance == null) return 'Out of Range';
+    if (_displayDistance! < 2) return 'Very Close';
+    if (_displayDistance! < 5) return 'Near';
+    if (_displayDistance! < 10) return 'Nearby';
     return 'Far';
   }
 
   Color get _statusColor {
     if (!_deviceFound) return _AppTheme.colorOutOfRange;
-    if (_distance! < 2) return _AppTheme.colorVeryClose;
-    if (_distance! < 5) return _AppTheme.colorNear;
-    if (_distance! < 10) return _AppTheme.colorNearby;
+    if (_displayDistance! < 2) return _AppTheme.colorVeryClose;
+    if (_displayDistance! < 5) return _AppTheme.colorNear;
+    if (_displayDistance! < 10) return _AppTheme.colorNearby;
     return _AppTheme.colorFar;
   }
 
   // ─── Build ─────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 120, // Compact height
+      height: 120,
       child: FlutterBluePlus.adapterStateNow != BluetoothAdapterState.on
           ? _buildTurnOff()
           : _deviceFound
@@ -229,12 +286,11 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
         borderRadius: BorderRadius.circular(_AppTheme.radius),
         boxShadow: _AppTheme.cardShadow,
       ),
-      margin: EdgeInsets.all(5),
+      margin: const EdgeInsets.all(5),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
           Row(
             children: [
               _PulsingDot(
@@ -251,22 +307,19 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
                 ),
               ),
               _SignalBars(
-                rssi: _smoothedRssi ?? -100,
+                rssi: _displayRssi ?? -100,
                 activeColor: _statusColor,
               ),
             ],
           ),
-
           const Spacer(),
-
-          // Main distance display
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 _distanceLabel,
                 style: _AppTheme.distanceStyle.copyWith(
-                  fontSize: 32, // Reduced from 52
+                  fontSize: 32,
                   color: _statusColor,
                 ),
               ),
@@ -281,20 +334,13 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
                       color: _statusColor.withOpacity(0.8),
                     ),
                   ),
-                  // Text(
-                  //   'RSSI: ${_smoothedRssi?.toInt() ?? '—'} dBm',
-                  //   style: _AppTheme.chipLabelStyle,
-                  // ),
                 ],
               ),
             ],
           ),
-
           const Spacer(),
-
-          // Distance bar (compact)
           _DistanceBar(
-            distance: _distance ?? 0,
+            distance: _displayDistance ?? 0,
             maxDistance: 20,
             color: _statusColor,
             compact: true,
@@ -380,7 +426,7 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
 }
 
 // ─────────────────────────────────────────────
-//  Sub-components
+//  Sub-components (unchanged)
 // ─────────────────────────────────────────────
 
 class _PulsingDot extends StatelessWidget {
@@ -469,44 +515,30 @@ class _DistanceBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fraction = (distance / maxDistance).clamp(0.0, 1.0);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (!compact)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('0 m', style: _AppTheme.barLabelStyle),
-              Text('${maxDistance.toInt()} m', style: _AppTheme.barLabelStyle),
-            ],
-          ),
-        if (!compact) const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(compact ? 2 : 6),
-          child: SizedBox(
-            height: compact ? 4 : 8,
-            child: LayoutBuilder(
-              builder: (ctx, constraints) {
-                return Stack(
-                  children: [
-                    Container(color: _AppTheme.barTrack),
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeOut,
-                      width: constraints.maxWidth * fraction,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [color.withOpacity(0.6), color],
-                        ),
-                      ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(compact ? 2 : 6),
+      child: SizedBox(
+        height: compact ? 4 : 8,
+        child: LayoutBuilder(
+          builder: (ctx, constraints) {
+            return Stack(
+              children: [
+                Container(color: _AppTheme.barTrack),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 500),
+                  curve: Curves.easeOut,
+                  width: constraints.maxWidth * fraction,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [color.withOpacity(0.6), color],
                     ),
-                  ],
-                );
-              },
-            ),
-          ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
-      ],
+      ),
     );
   }
 }
@@ -537,66 +569,53 @@ class _ScanningIndicator extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-//  Theme — edit all colors & styles here
+//  Theme
 // ─────────────────────────────────────────────
 abstract class _AppTheme {
-  // ── Card
   static const Color cardBg = Color(0xFFFFFFFF);
   static const double radius = 20.0;
   static final List<BoxShadow> cardShadow = [
     BoxShadow(color: Color(0x12000000), blurRadius: 20, offset: Offset(0, 6)),
     BoxShadow(color: Color(0x08000000), blurRadius: 6, offset: Offset(0, 2)),
   ];
-
-  // ── Status colors  ← easy to change
-  static const Color colorVeryClose = Color(0xFF2ECC71); // green
-  static const Color colorNear = Color(0xFF27AE60); // darker green
-  static const Color colorNearby = Color(0xFFF39C12); // amber
-  static const Color colorFar = Color(0xFFE74C3C); // red
-  static const Color colorOutOfRange = Color(0xFFBDC3C7); // grey
-
-  // ── Bar & chip
+  static const Color colorVeryClose = Color(0xFF2ECC71);
+  static const Color colorNear = Color(0xFF27AE60);
+  static const Color colorNearby = Color(0xFFF39C12);
+  static const Color colorFar = Color(0xFFE74C3C);
+  static const Color colorOutOfRange = Color(0xFFBDC3C7);
   static const Color barInactive = Color(0xFFECF0F1);
   static const Color barTrack = Color(0xFFF5F6FA);
-
-  // ── Text styles
   static const TextStyle deviceNameStyle = TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w600,
     color: Color(0xFF2C3E50),
     letterSpacing: 0.3,
   );
-
   static const TextStyle distanceStyle = TextStyle(
     fontSize: 52,
     fontWeight: FontWeight.w700,
     color: Color(0xFF2C3E50),
     height: 1,
   );
-
   static const TextStyle proximityLabelStyle = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.w500,
     color: Color(0xFF7F8C8D),
   );
-
   static const TextStyle chipLabelStyle = TextStyle(
     fontSize: 11,
     fontWeight: FontWeight.w400,
     color: Color(0xFF95A5A6),
   );
-
   static const TextStyle barLabelStyle = TextStyle(
     fontSize: 10,
     color: Color(0xFFBDC3C7),
   );
-
   static const TextStyle outOfRangeTitle = TextStyle(
     fontSize: 20,
     fontWeight: FontWeight.w700,
     color: Color(0xFF2C3E50),
   );
-
   static const TextStyle scanningStyle = TextStyle(
     fontSize: 12,
     color: Color(0xFFBDC3C7),
