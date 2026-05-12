@@ -217,12 +217,9 @@ class _SessionTimerWidgetState extends State<SessionTimerWidget> {
 
   void _resumeTimer() {
     setState(() => _running = true);
-
-    // Schedule notification for remaining time
     if (_remainingSecs > 0) {
       scheduleNotificationSeconds(_remainingSecs);
     }
-
     _saveState();
     _startTicking();
   }

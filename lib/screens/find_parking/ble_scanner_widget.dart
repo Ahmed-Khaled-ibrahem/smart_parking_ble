@@ -39,7 +39,6 @@ double _rssiToDistance(double avgRssi) {
   if (ratio < 1.0) {
     return pow(ratio, 10).toDouble();
   }
-  print(avgRssi);
   return pow(
     10,
     (avgRssi - _BleConfig.txPower) / (-10 * _BleConfig.pathLossExponent),
@@ -165,7 +164,6 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
     if (match.isEmpty) return;
     _lastSeen = now;
     final rssi = match.first.rssi.toDouble();
-    print(rssi);
     _addRssiReading(rssi);
   }
 

@@ -109,7 +109,7 @@ class _AvailableParkingScreenState extends State<AvailableParkingScreen> {
   }
 
   Stream<List<RealParkingUnit>>? _unitsStream;
-  Map<String, double> _rssiMap = {};
+  final Map<String, double> _rssiMap = {};
   StreamSubscription<List<ScanResult>>? _scanSub;
   bool _isScanning = false;
 
@@ -358,11 +358,11 @@ class _SpotsAvailableView extends StatelessWidget {
     // Filter available spots (free or reserved by me)
     final availableSpots = spots.where((spot) {
       final isFree = spot.status == 'free';
-      final isBooked =
+      final isBusy = spot.status == 'busy';
+      final isBooked = spot.bookedBy.isNotEmpty &&
           DateTime.now().toUtc().difference(spot.bookedAt).inMinutes <= 10;
-      final bookedByMe =
-          spot.bookedBy == FirebaseAuth.instance.currentUser?.uid;
-      return isFree || (isBooked && bookedByMe);
+
+      return isFree || isBusy || isBooked;
     }).toList();
 
     return Padding(
@@ -513,7 +513,10 @@ class _ParkingSpotCard extends StatelessWidget {
 
   bool get isFree => spot.status == 'free';
 
+  bool get isBusy => spot.status == 'busy';
+
   bool get isBooked =>
+      spot.bookedBy.isNotEmpty &&
       DateTime.now().toUtc().difference(spot.bookedAt).inMinutes <= 10;
 
   bool get bookedByMe =>
@@ -681,29 +684,35 @@ class _ParkingSpotCard extends StatelessWidget {
                             width: 6,
                             height: 6,
                             decoration: BoxDecoration(
-                              color: isBooked
-                                  ? bookedByMe
-                                        ? g5
-                                        : const Color(0xFFFFA000)
-                                  : const Color(0xFF40C074),
+                              color: isBusy
+                                  ? Colors.redAccent
+                                  : (isBooked
+                                      ? (bookedByMe
+                                          ? g5
+                                          : const Color(0xFFFFA000))
+                                      : const Color(0xFF40C074)),
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            isBooked
-                                ? bookedByMe
-                                      ? 'Reserved by you'
-                                      : 'Reserved'
-                                : 'Available',
+                            isBusy
+                                ? 'Busy'
+                                : (isBooked
+                                    ? (bookedByMe
+                                        ? 'Reserved by you'
+                                        : 'Booked by another person')
+                                    : 'Available'),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: isBooked
-                                  ? bookedByMe
-                                        ? g3
-                                        : const Color(0xFFFFA000)
-                                  : g2,
+                              color: isBusy
+                                  ? Colors.redAccent
+                                  : (isBooked
+                                      ? (bookedByMe
+                                          ? g3
+                                          : const Color(0xFFFFA000))
+                                      : g2),
                             ),
                           ),
                           if (rssi != null) ...[

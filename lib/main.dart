@@ -13,9 +13,6 @@ void main() {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
-      DateTime now = DateTime.now();
-      DateTime date = DateTime(2026, 4, 1);
-
       // Initialize Hive
       await notificationsConfig();
       // Initialize Firebase

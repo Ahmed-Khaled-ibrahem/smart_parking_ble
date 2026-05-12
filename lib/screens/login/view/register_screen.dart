@@ -446,7 +446,6 @@ class _RegisterScreenState extends State<RegisterScreen>
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final confirm = _confirmPasswordController.text;
-
     if (name.isEmpty || email.isEmpty || password.isEmpty || confirm.isEmpty) {
       _showSnack('Please fill in all fields');
       return;
@@ -455,9 +454,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       _showSnack('Passwords do not match', isError: true);
       return;
     }
-
     setState(() => _isLoading = true);
-
     try {
       final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: email,
