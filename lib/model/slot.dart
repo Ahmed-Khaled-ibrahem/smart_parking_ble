@@ -4,7 +4,7 @@ enum ParkingStatus { available, occupied , booked }
 
 enum ParkingType { normal, disablePerson }
 
-enum NavigationMode { fromEntrance, fromCurrent }
+enum NavigationMode { fromEntrance, fromCurrent, fromGate1 }
 
 class ParkingSlot {
   final String id;

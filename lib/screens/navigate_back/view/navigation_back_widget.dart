@@ -25,7 +25,7 @@ class _NavigateBackToParkingScreenState
     with TickerProviderStateMixin {
   late List<ParkingSlot> slots;
   String? selectedSlotId;
-  NavigationMode navMode = NavigationMode.fromEntrance;
+  NavigationMode navMode = NavigationMode.fromGate1;
 
   // Animation controllers
   late AnimationController _pathAnimController;

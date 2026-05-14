@@ -260,6 +260,8 @@ class ParkingLotPainter extends CustomPainter {
     Offset start;
     if (navMode == NavigationMode.fromEntrance) {
       start = Offset(mvCX, 20);
+    } else if (navMode == NavigationMode.fromGate1) {
+      start = Offset(w - 20, mhCY);
     } else {
       start = Offset(20, mhCY); // Current mode starts from left road
     }

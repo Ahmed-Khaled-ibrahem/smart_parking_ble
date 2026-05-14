@@ -16,7 +16,7 @@ class _ParkingScreenState extends State<ParkingScreen>
     with TickerProviderStateMixin {
   late List<ParkingSlot> slots;
   String? selectedSlotId;
-  NavigationMode navMode = NavigationMode.fromEntrance;
+  NavigationMode navMode = NavigationMode.fromGate1;
   static const Color primaryGreen = Color(0xFF2D6A4F);
   static const Color lightGreen = Color(0xFFD8EAD3);
 
