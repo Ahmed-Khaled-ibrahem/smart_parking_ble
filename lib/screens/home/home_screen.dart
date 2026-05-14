@@ -438,7 +438,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       children: [
                                         Expanded(
                                           child: _ActionCard(
-                                            label: 'CURRENT',
+                                            label: 'CURRENT PARKING',
                                             sublabel: 'Active session',
                                             icon: Icons.directions_car_outlined,
                                             isDark: false,

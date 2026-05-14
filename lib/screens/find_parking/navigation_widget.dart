@@ -159,6 +159,34 @@ class _NavigationWidgetState extends State<NavigationWidget>
     super.dispose();
   }
 
+  Stream<List<RealParkingUnit>> streamUnits() {
+    final ref = FirebaseDatabase.instance.ref('units');
+
+    return ref.onValue.map((event) {
+      final data = event.snapshot.value as Map<dynamic, dynamic>?;
+
+      if (data == null) return [];
+
+      final list_of_devices = data.entries.map((e) {
+        final mac = e.key.toString();
+        final unit = Map<String, dynamic>.from(e.value);
+
+        return RealParkingUnit(
+          mac: mac,
+          label: unit['label'] ?? '',
+          status: unit['status'] ?? '',
+          linkedTo: unit['linkedTo'] ?? '',
+          bookedBy: unit['bookedBy'] ?? '',
+          bookedAt:
+              DateTime.tryParse(unit['bookedAt'] ?? '') ??
+              DateTime.now().subtract(const Duration(days: 1)),
+        );
+      }).toList();
+      realUnits = list_of_devices;
+      return list_of_devices;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -183,77 +211,92 @@ class _NavigationWidgetState extends State<NavigationWidget>
                     width: double.infinity,
                     child: Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Consumer(
-                        builder: (context, ref, child) {
-                          final profileCtrl = ref.watch(
-                            profileProvider.notifier,
-                          );
-                          // showing the timer
-                          if (realUnits.any(
-                            (e) =>
-                                e.bookedBy ==
-                                    FirebaseAuth.instance.currentUser!.uid &&
-                                e.bookedAt
-                                        .difference(DateTime.now())
-                                        .abs()
-                                        .inMinutes <
-                                    10,
-                          )) {
-                            final theTargetUnit = realUnits
-                                .where(
-                                  (e) =>
-                                      e.bookedBy ==
-                                      FirebaseAuth.instance.currentUser!.uid,
-                                )
-                                .first;
+                      child: StreamBuilder(
+                        stream: streamUnits(),
+                        builder: (context, snap) {
+                          return Consumer(
+                            builder: (context, ref, child) {
+                              final profileCtrl = ref.watch(
+                                profileProvider.notifier,
+                              );
+                              // showing the timer
+                              if (realUnits.any(
+                                (e) =>
+                                    e.bookedBy ==
+                                        FirebaseAuth
+                                            .instance
+                                            .currentUser!
+                                            .uid &&
+                                    e.bookedAt
+                                            .difference(DateTime.now())
+                                            .abs()
+                                            .inMinutes <
+                                        10,
+                              )) {
+                                final theTargetUnit = realUnits
+                                    .where(
+                                      (e) =>
+                                          e.bookedBy ==
+                                          FirebaseAuth
+                                              .instance
+                                              .currentUser!
+                                              .uid,
+                                    )
+                                    .first;
 
-                            return CountdownTimerWidget(
-                              bookedAt: theTargetUnit.bookedAt,
-                              onEndCallback: () {
-                                setState(() {
-                                  loading = false;
-                                });
-                              },
-                            );
-                          }
-                          return ElevatedButton(
-                            onPressed: loading
-                                ? null
-                                : () async {
+                                return CountdownTimerWidget(
+                                  bookedAt: theTargetUnit.bookedAt,
+                                  onEndCallback: () {
                                     setState(() {
-                                      loading = true;
+                                      loading = false;
                                     });
-                                    final profile = ref.read(profileProvider);
-                                    final p = CurrentParking(
-                                      parkedAt: DateTime.now(),
-                                      parkingId: widget.slotId,
-                                      parkingAreaId: 'P1',
-                                    );
-                                    await updateProfileToFirebase(
-                                      profile!.uid ?? 'tt',
-                                      p,
-                                    );
-                                    bookUnitByLabel(widget.slotId);
-                                    profileCtrl.update(currentParking: p);
-                                    Navigator.pop(context);
-                                    Navigator.pop(context);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        backgroundColor: Colors.green,
-                                        content: Text(
-                                          'Parking saved successfully',
-                                        ),
-                                      ),
-                                    );
                                   },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF2D6A4F),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                            child: Text('Save My Parking'),
+                                );
+                              }
+                              return ElevatedButton(
+                                onPressed: loading
+                                    ? null
+                                    : () async {
+                                        setState(() {
+                                          loading = true;
+                                        });
+                                        final profile = ref.read(
+                                          profileProvider,
+                                        );
+                                        final p = CurrentParking(
+                                          parkedAt: DateTime.now(),
+                                          parkingId: widget.slotId,
+                                          parkingAreaId: 'P1',
+                                        );
+                                        await updateProfileToFirebase(
+                                          profile!.uid ?? 'tt',
+                                          p,
+                                        );
+                                        bookUnitByLabel(widget.slotId);
+                                        profileCtrl.update(currentParking: p);
+                                        Navigator.pop(context);
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            backgroundColor: Colors.green,
+                                            content: Text(
+                                              'Parking saved successfully',
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Color(0xFF2D6A4F),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                ),
+                                child: Text('Save My Parking'),
+                              );
+                            },
                           );
                         },
                       ),

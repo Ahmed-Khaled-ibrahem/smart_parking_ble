@@ -359,7 +359,8 @@ class _SpotsAvailableView extends StatelessWidget {
     final availableSpots = spots.where((spot) {
       final isFree = spot.status == 'free';
       final isBusy = spot.status == 'busy';
-      final isBooked = spot.bookedBy.isNotEmpty &&
+      final isBooked =
+          spot.bookedBy.isNotEmpty &&
           DateTime.now().toUtc().difference(spot.bookedAt).inMinutes <= 10;
 
       return isFree || isBusy || isBooked;
@@ -652,27 +653,27 @@ class _ParkingSpotCard extends StatelessWidget {
                               color: darkText,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          if (bookedByMe)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: g5.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'YOU',
-                                style: TextStyle(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w800,
-                                  color: g3,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
+                          // const SizedBox(width: 8),
+                          // if (bookedByMe)
+                          //   Container(
+                          //     padding: const EdgeInsets.symmetric(
+                          //       horizontal: 6,
+                          //       vertical: 2,
+                          //     ),
+                          //     decoration: BoxDecoration(
+                          //       color: g5.withOpacity(0.2),
+                          //       borderRadius: BorderRadius.circular(4),
+                          //     ),
+                          //     child: const Text(
+                          //       'YOU',
+                          //       style: TextStyle(
+                          //         fontSize: 8,
+                          //         fontWeight: FontWeight.w800,
+                          //         color: g3,
+                          //         letterSpacing: 0.5,
+                          //       ),
+                          //     ),
+                          //   ),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -687,10 +688,10 @@ class _ParkingSpotCard extends StatelessWidget {
                               color: isBusy
                                   ? Colors.redAccent
                                   : (isBooked
-                                      ? (bookedByMe
-                                          ? g5
-                                          : const Color(0xFFFFA000))
-                                      : const Color(0xFF40C074)),
+                                        ? (bookedByMe
+                                              ? g5
+                                              : const Color(0xFFFFA000))
+                                        : const Color(0xFF40C074)),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -699,20 +700,20 @@ class _ParkingSpotCard extends StatelessWidget {
                             isBusy
                                 ? 'Busy'
                                 : (isBooked
-                                    ? (bookedByMe
-                                        ? 'Reserved by you'
-                                        : 'Booked by another person')
-                                    : 'Available'),
+                                      ? (bookedByMe
+                                            ? 'Reserved by you'
+                                            : 'Booked by another person')
+                                      : 'Available'),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: isBusy
                                   ? Colors.redAccent
                                   : (isBooked
-                                      ? (bookedByMe
-                                          ? g3
-                                          : const Color(0xFFFFA000))
-                                      : g2),
+                                        ? (bookedByMe
+                                              ? g3
+                                              : const Color(0xFFFFA000))
+                                        : g2),
                             ),
                           ),
                           if (rssi != null) ...[

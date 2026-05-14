@@ -110,8 +110,6 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
     });
   }
 
-  /// The ONLY place that calls setState and updates the display.
-  /// Runs every [_BleConfig.uiRefreshMs] ms — completely decoupled from scan callbacks.
   void _startUiTimer() {
     _uiTimer?.cancel();
     _uiTimer = Timer.periodic(Duration(milliseconds: _BleConfig.uiRefreshMs), (
@@ -169,8 +167,6 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
     super.dispose();
   }
 
-  // ─── BLE Scanning ──────────────────────────
-
   void _startScanning() async {
     if (_isScanning) return;
     await FlutterBluePlus.adapterState.first;
@@ -194,7 +190,6 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
   }
 
   void _onScanResults(List<ScanResult> results) {
-    // ── NO setState here — only update internal buffers ──
     final now = DateTime.now();
     final match = results.where(
       (r) =>
@@ -209,12 +204,7 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
     _processRssi(rssi);
   }
 
-  /// Multi-stage RSSI pipeline (no UI side effects):
-  /// 1. Add raw reading to circular window
-  /// 2. Compute trimmed mean of window (discard top/bottom outlier)
-  /// 3. Feed trimmed mean into exponential moving average
   void _processRssi(double rawRssi) {
-    // Stage 1 — circular buffer
     _rssiWindow.add(rawRssi);
     if (_rssiWindow.length > _BleConfig.rssiWindowSize) {
       _rssiWindow.removeAt(0);
@@ -240,8 +230,6 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
     }
   }
 
-  // ─── UI Helpers ────────────────────────────
-
   String get _distanceLabel {
     if (_displayDistance == null) return '—';
     if (_displayDistance! < 1) return '< 1 m';
@@ -263,8 +251,6 @@ class _BleProximityWidgetState extends State<BleProximityWidget>
     if (_displayDistance! < 10) return _AppTheme.colorNearby;
     return _AppTheme.colorFar;
   }
-
-  // ─── Build ─────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
